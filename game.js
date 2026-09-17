@@ -1,5 +1,5 @@
-// ============ BROWSER SHOOTER v2.1 ============
-// Исправлены коллизии и трассеры
+// ============ BROWSER SHOOTER v2.2 ============
+// Полная версия: движение, коллизии, оружие, звуки, отдача, враги
 
 let scene, camera, renderer;
 let score = 0;
@@ -141,7 +141,6 @@ function createWalls() {
         wall.position.set(...cfg.pos);
         wall.castShadow = true;
         wall.receiveShadow = true;
-        // Помечаем как стену и сохраняем размеры
         wall.userData.isWall = true;
         wall.userData.size = { x: cfg.size[0], y: cfg.size[1], z: cfg.size[2] };
         scene.add(wall);
@@ -259,7 +258,7 @@ function spawnEnemy() {
 }
 
 // ============================================
-// КОЛЛИЗИИ (ИСПРАВЛЕНО)
+// КОЛЛИЗИИ
 // ============================================
 function checkCollision(newPos, radius) {
     for (const obs of obstacles) {
@@ -267,7 +266,6 @@ function checkCollision(newPos, radius) {
         let hx, hz;
 
         if (obs.userData.size) {
-            // Используем реальные размеры объекта
             hx = obs.userData.size.x / 2;
             hz = obs.userData.size.z / 2;
         } else {
@@ -282,7 +280,6 @@ function checkCollision(newPos, radius) {
         }
     }
 
-    // Границы карты (внутренние, не соприкасаемся со стенами)
     if (Math.abs(newPos.x) > 48.5 || Math.abs(newPos.z) > 48.5) return true;
 
     return false;
@@ -330,9 +327,6 @@ function shoot() {
     createTracer(start, end);
 }
 
-// ============================================
-// ТРАССЕР (ИСПРАВЛЕНО)
-// ============================================
 function createTracer(start, end) {
     const geo = new THREE.BufferGeometry().setFromPoints([start, end]);
     const mat = new THREE.LineBasicMaterial({ 
@@ -405,27 +399,33 @@ function playHitSound() {
 }
 
 // ============================================
-// УПРАВЛЕНИЕ
+// УПРАВЛЕНИЕ (ИСПРАВЛЕНО)
 // ============================================
 function setupControls() {
-    document.addEventListener('keydown', (e) => {
+    const handleKeyDown = (e) => {
         const k = e.key.toLowerCase();
-        if (k === 'w') keys.w = true;
-        if (k === 'a') keys.a = true;
-        if (k === 's') keys.s = true;
-        if (k === 'd') keys.d = true;
-    });
-
-    document.addEventListener('keyup', (e) => {
+        if (k === 'w' || k === 'ц' || k === 'arrowup') keys.w = true;
+        if (k === 's' || k === 'ы' || k === 'arrowdown') keys.s = true;
+        if (k === 'a' || k === 'ф' || k === 'arrowleft') keys.a = true;
+        if (k === 'd' || k === 'в' || k === 'arrowright') keys.d = true;
+    };
+    const handleKeyUp = (e) => {
         const k = e.key.toLowerCase();
-        if (k === 'w') keys.w = false;
-        if (k === 'a') keys.a = false;
-        if (k === 's') keys.s = false;
-        if (k === 'd') keys.d = false;
-    });
+        if (k === 'w' || k === 'ц' || k === 'arrowup') keys.w = false;
+        if (k === 's' || k === 'ы' || k === 'arrowdown') keys.s = false;
+        if (k === 'a' || k === 'ф' || k === 'arrowleft') keys.a = false;
+        if (k === 'd' || k === 'в' || k === 'arrowright') keys.d = false;
+    };
 
-    document.addEventListener('click', () => {
-        if (isGameActive) renderer.domElement.requestPointerLock();
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    renderer.domElement.addEventListener('click', () => {
+        if (isGameActive && !document.pointerLockElement) {
+            renderer.domElement.requestPointerLock();
+        }
     });
 
     document.addEventListener('mousemove', (e) => {
@@ -448,34 +448,37 @@ function setupControls() {
 }
 
 // ============================================
-// ОБНОВЛЕНИЕ
+// ОБНОВЛЕНИЕ ИГРОКА (ИСПРАВЛЕНО)
 // ============================================
 function updatePlayer(delta) {
     if (!isGameActive) return;
 
-    const speed = 15;
-    const dir = new THREE.Vector3(
-        Number(keys.d) - Number(keys.a),
-        0,
-        Number(keys.s) - Number(keys.w)
-    );
-    if (dir.length() > 0) dir.normalize();
+    const speed = 8;
+    let moved = false;
 
     const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
     const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
 
-    const move = new THREE.Vector3()
-        .addScaledVector(forward, -dir.z * speed * delta)
-        .addScaledVector(right, dir.x * speed * delta);
+    const move = new THREE.Vector3(0, 0, 0);
 
-    // Раздельное движение по осям — чтобы можно было скользить вдоль стен
-    const posX = camera.position.clone();
-    posX.x += move.x;
-    if (!checkCollision(posX, 0.4)) camera.position.x = posX.x;
+    if (keys.w) { move.add(forward); moved = true; }
+    if (keys.s) { move.sub(forward); moved = true; }
+    if (keys.a) { move.sub(right); moved = true; }
+    if (keys.d) { move.add(right); moved = true; }
 
-    const posZ = camera.position.clone();
-    posZ.z += move.z;
-    if (!checkCollision(posZ, 0.4)) camera.position.z = posZ.z;
+    if (moved) {
+        move.normalize();
+        move.multiplyScalar(speed * delta);
+
+        const newX = camera.position.x + move.x;
+        if (!checkCollision(new THREE.Vector3(newX, camera.position.y, camera.position.z), 0.4)) {
+            camera.position.x = newX;
+        }
+        const newZ = camera.position.z + move.z;
+        if (!checkCollision(new THREE.Vector3(camera.position.x, camera.position.y, newZ), 0.4)) {
+            camera.position.z = newZ;
+        }
+    }
 
     recoilPitch *= 0.9;
     recoilRoll *= 0.9;
@@ -487,7 +490,7 @@ function updatePlayer(delta) {
 
     if (weaponParts.group) {
         const t = performance.now() / 200;
-        const bob = dir.length() > 0 ? Math.sin(t) * 0.01 : 0;
+        const bob = moved ? Math.sin(t) * 0.01 : 0;
         weaponParts.group.position.y = -0.25 + bob;
     }
 }
@@ -507,7 +510,6 @@ function updateEnemies(delta) {
             if (!checkCollision(newPos, enemy.userData.radius)) {
                 enemy.position.copy(newPos);
             } else {
-                // Обход
                 const side = new THREE.Vector3(-dir.z, 0, dir.x);
                 const tryPos = enemy.position.clone().addScaledVector(side, enemy.userData.speed * delta);
                 tryPos.y = 1.0;

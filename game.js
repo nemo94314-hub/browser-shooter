@@ -1,5 +1,5 @@
-// ============ BROWSER SHOOTER v2.0 ============
-// С оружием, звуками, отдачей, улучшенными врагами и коллизиями
+// ============ BROWSER SHOOTER v2.1 ============
+// Исправлены коллизии и трассеры
 
 let scene, camera, renderer;
 let score = 0;
@@ -11,18 +11,15 @@ let obstacles = [];
 let weaponParts = [];
 let clock = new THREE.Clock();
 
-// --- Движение ---
 const keys = { w: false, a: false, s: false, d: false };
 let canShoot = true;
-const SHOOT_COOLDOWN = 120; // мс
+const SHOOT_COOLDOWN = 120;
 
-// --- Мышь и отдача ---
 let yaw = 0, pitch = 0;
 let recoilPitch = 0;
 let recoilRoll = 0;
 const MOUSE_SENSITIVITY = 0.002;
 
-// --- Аудио ---
 let audioCtx = null;
 
 // ============================================
@@ -35,21 +32,19 @@ function init() {
 
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, 1.7, 0);
-    scene.add(camera); // Важно: добавляем камеру в сцену, чтобы видеть оружие
+    scene.add(camera);
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     document.body.appendChild(renderer.domElement);
 
-    // Свет
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
     const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
     dirLight.position.set(20, 30, 20);
     dirLight.castShadow = true;
     scene.add(dirLight);
 
-    // Пол
     const floor = new THREE.Mesh(
         new THREE.PlaneGeometry(100, 100),
         new THREE.MeshStandardMaterial({ color: 0x1a1e4a, roughness: 0.9 })
@@ -65,7 +60,6 @@ function init() {
     createObstacles();
     createWeapon();
 
-    // Инициализация аудио
     try {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     } catch (e) {
@@ -80,54 +74,45 @@ function init() {
 }
 
 // ============================================
-// ОРУЖИЕ В РУКАХ
+// ОРУЖИЕ
 // ============================================
 function createWeapon() {
-    // Ствол
     const gunGroup = new THREE.Group();
 
     const metalMat = new THREE.MeshStandardMaterial({ color: 0x333344, metalness: 0.8, roughness: 0.3 });
     const darkMat = new THREE.MeshStandardMaterial({ color: 0x1a1a22, metalness: 0.6, roughness: 0.5 });
     const gripMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9 });
 
-    // Основной ствол
     const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.6), metalMat);
     barrel.position.set(0, 0, -0.3);
     gunGroup.add(barrel);
 
-    // Верхняя планка
     const topRail = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.03, 0.5), darkMat);
     topRail.position.set(0, 0.06, -0.3);
     gunGroup.add(topRail);
 
-    // Магазин
     const magazine = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.2, 0.1), darkMat);
     magazine.position.set(0, -0.12, -0.15);
     magazine.rotation.x = 0.15;
     gunGroup.add(magazine);
 
-    // Рукоять
     const grip = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.18, 0.1), gripMat);
     grip.position.set(0, -0.12, 0.05);
     grip.rotation.x = 0.25;
     gunGroup.add(grip);
 
-    // Мушка
     const sight = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.04, 0.02), metalMat);
     sight.position.set(0, 0.09, -0.55);
     gunGroup.add(sight);
 
-    // Прицел
     const scope = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.05, 0.02), metalMat);
     scope.position.set(0, 0.1, -0.1);
     gunGroup.add(scope);
 
-    // Позиция оружия относительно камеры (правый нижний угол)
     gunGroup.position.set(0.3, -0.25, -0.5);
     gunGroup.rotation.y = -0.05;
     gunGroup.rotation.z = 0.02;
 
-    // Вспышка (скрыта по умолчанию)
     const flash = new THREE.PointLight(0xffaa00, 0, 5);
     flash.position.set(0, 0.05, -0.6);
     gunGroup.add(flash);
@@ -156,6 +141,9 @@ function createWalls() {
         wall.position.set(...cfg.pos);
         wall.castShadow = true;
         wall.receiveShadow = true;
+        // Помечаем как стену и сохраняем размеры
+        wall.userData.isWall = true;
+        wall.userData.size = { x: cfg.size[0], y: cfg.size[1], z: cfg.size[2] };
         scene.add(wall);
         obstacles.push(wall);
     });
@@ -184,7 +172,7 @@ function createObstacles() {
 }
 
 // ============================================
-// УЛУЧШЕННЫЙ ВРАГ (С РУКАМИ, НОГАМИ, ГОЛОВОЙ)
+// ВРАГ
 // ============================================
 function createEnemyMesh() {
     const group = new THREE.Group();
@@ -192,19 +180,16 @@ function createEnemyMesh() {
     const headMat = new THREE.MeshStandardMaterial({ color: 0xff6b81, roughness: 0.5 });
     const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
-    // Торс
     const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.0, 0.5), bodyMat);
     torso.position.y = 0.5;
     torso.castShadow = true;
     group.add(torso);
 
-    // Голова
     const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), headMat);
     head.position.y = 1.3;
     head.castShadow = true;
     group.add(head);
 
-    // Глаза
     const eyeGeo = new THREE.BoxGeometry(0.1, 0.1, 0.05);
     const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
     eyeL.position.set(-0.12, 1.35, -0.26);
@@ -213,7 +198,6 @@ function createEnemyMesh() {
     eyeR.position.set(0.12, 1.35, -0.26);
     group.add(eyeR);
 
-    // Зрачки
     const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
     const pupilGeo = new THREE.BoxGeometry(0.05, 0.05, 0.02);
     const pL = new THREE.Mesh(pupilGeo, pupilMat);
@@ -223,7 +207,6 @@ function createEnemyMesh() {
     pR.position.set(0.12, 1.35, -0.29);
     group.add(pR);
 
-    // Руки
     const armGeo = new THREE.BoxGeometry(0.2, 0.7, 0.2);
     const armL = new THREE.Mesh(armGeo, bodyMat);
     armL.position.set(-0.55, 0.6, 0);
@@ -234,7 +217,6 @@ function createEnemyMesh() {
     armR.castShadow = true;
     group.add(armR);
 
-    // Ноги
     const legGeo = new THREE.BoxGeometry(0.25, 0.6, 0.25);
     const legL = new THREE.Mesh(legGeo, bodyMat);
     legL.position.set(-0.2, -0.3, 0);
@@ -245,14 +227,12 @@ function createEnemyMesh() {
     legR.castShadow = true;
     group.add(legR);
 
-    // Позиция группы так, чтобы ноги стояли на полу
     group.position.y = 1.0;
-
     return group;
 }
 
 // ============================================
-// СПАВН ВРАГОВ
+// СПАВН
 // ============================================
 function spawnEnemy() {
     if (!isGameActive) return;
@@ -260,7 +240,6 @@ function spawnEnemy() {
 
     const enemy = createEnemyMesh();
 
-    // Спавн в случайной точке по кольцу
     const angle = Math.random() * Math.PI * 2;
     const radius = 25 + Math.random() * 15;
     enemy.position.set(
@@ -272,7 +251,7 @@ function spawnEnemy() {
     enemy.userData = {
         health: 30 + wave * 5,
         speed: 1.5 + Math.random() * 1 + wave * 0.15,
-        radius: 0.5
+        radius: 0.6
     };
 
     scene.add(enemy);
@@ -280,32 +259,32 @@ function spawnEnemy() {
 }
 
 // ============================================
-// КОЛЛИЗИИ
+// КОЛЛИЗИИ (ИСПРАВЛЕНО)
 // ============================================
 function checkCollision(newPos, radius) {
-    // Проверка на столкновение с препятствиями
     for (const obs of obstacles) {
-        const halfX = 2, halfZ = 2;
+        const obsPos = obs.position;
+        let hx, hz;
+
         if (obs.userData.size) {
-            // не стена, а куб-препятствие
-            const obsPos = obs.position;
-            const dx = Math.abs(newPos.x - obsPos.x);
-            const dz = Math.abs(newPos.z - obsPos.z);
-            if (dx < halfX + radius && dz < halfZ + radius) {
-                return true;
-            }
+            // Используем реальные размеры объекта
+            hx = obs.userData.size.x / 2;
+            hz = obs.userData.size.z / 2;
         } else {
-            // Стены по периметру — они тонкие
-            const obsPos = obs.position;
-            const dx = Math.abs(newPos.x - obsPos.x);
-            const dz = Math.abs(newPos.z - obsPos.z);
-            // Стены 1x100 или 100x1
-            if (dx < 0.5 + radius && dz < 50 + radius) return true;
-            if (dz < 0.5 + radius && dx < 50 + radius) return true;
+            continue;
+        }
+
+        const dx = Math.abs(newPos.x - obsPos.x);
+        const dz = Math.abs(newPos.z - obsPos.z);
+
+        if (dx < hx + radius && dz < hz + radius) {
+            return true;
         }
     }
-    // Границы карты
-    if (Math.abs(newPos.x) > 48 || Math.abs(newPos.z) > 48) return true;
+
+    // Границы карты (внутренние, не соприкасаемся со стенами)
+    if (Math.abs(newPos.x) > 48.5 || Math.abs(newPos.z) > 48.5) return true;
+
     return false;
 }
 
@@ -318,20 +297,16 @@ function shoot() {
     canShoot = false;
     setTimeout(() => { canShoot = true; }, SHOOT_COOLDOWN);
 
-    // Отдача
     recoilPitch += 0.025;
     recoilRoll += (Math.random() - 0.5) * 0.01;
 
-    // Звук
     playShootSound();
 
-    // Вспышка
     if (weaponParts.flash) {
         weaponParts.flash.intensity = 3;
         setTimeout(() => { if (weaponParts.flash) weaponParts.flash.intensity = 0; }, 50);
     }
 
-    // Raycast
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
     const hits = raycaster.intersectObjects(enemies, true);
@@ -341,7 +316,6 @@ function shoot() {
 
     if (hits.length > 0) {
         end.copy(hits[0].point);
-        // Находим врага (родительскую группу)
         let enemy = hits[0].object;
         while (enemy.parent && !enemies.includes(enemy)) {
             enemy = enemy.parent;
@@ -356,12 +330,24 @@ function shoot() {
     createTracer(start, end);
 }
 
+// ============================================
+// ТРАССЕР (ИСПРАВЛЕНО)
+// ============================================
 function createTracer(start, end) {
     const geo = new THREE.BufferGeometry().setFromPoints([start, end]);
-    const mat = new THREE.LineBasicMaterial({ color: 0x00d4ff, opacity: 0.8, transparent: true });
+    const mat = new THREE.LineBasicMaterial({ 
+        color: 0x00d4ff, 
+        opacity: 0.9, 
+        transparent: true 
+    });
     const line = new THREE.Line(geo, mat);
     scene.add(line);
-    setTimeout(() => scene.remove(line), 80);
+    
+    setTimeout(() => {
+        scene.remove(line);
+        geo.dispose();
+        mat.dispose();
+    }, 40);
 }
 
 function createHitEffect(position) {
@@ -370,7 +356,11 @@ function createHitEffect(position) {
     const sphere = new THREE.Mesh(geo, mat);
     sphere.position.copy(position);
     scene.add(sphere);
-    setTimeout(() => scene.remove(sphere), 150);
+    setTimeout(() => {
+        scene.remove(sphere);
+        geo.dispose();
+        mat.dispose();
+    }, 150);
 }
 
 function killEnemy(enemy) {
@@ -382,7 +372,7 @@ function killEnemy(enemy) {
 }
 
 // ============================================
-// ЗВУКИ (Web Audio API)
+// ЗВУКИ
 // ============================================
 function playShootSound() {
     if (!audioCtx) return;
@@ -478,12 +468,15 @@ function updatePlayer(delta) {
         .addScaledVector(forward, -dir.z * speed * delta)
         .addScaledVector(right, dir.x * speed * delta);
 
-    const newPos = camera.position.clone().add(move);
-    if (!checkCollision(newPos, 0.4)) {
-        camera.position.copy(newPos);
-    }
+    // Раздельное движение по осям — чтобы можно было скользить вдоль стен
+    const posX = camera.position.clone();
+    posX.x += move.x;
+    if (!checkCollision(posX, 0.4)) camera.position.x = posX.x;
 
-    // Отдача (плавное восстановление)
+    const posZ = camera.position.clone();
+    posZ.z += move.z;
+    if (!checkCollision(posZ, 0.4)) camera.position.z = posZ.z;
+
     recoilPitch *= 0.9;
     recoilRoll *= 0.9;
 
@@ -492,7 +485,6 @@ function updatePlayer(delta) {
     camera.rotation.x = pitch + recoilPitch;
     camera.rotation.z = recoilRoll;
 
-    // Покачивание оружия при движении
     if (weaponParts.group) {
         const t = performance.now() / 200;
         const bob = dir.length() > 0 ? Math.sin(t) * 0.01 : 0;
@@ -509,13 +501,13 @@ function updateEnemies(delta) {
         const dist = dir.length();
         dir.normalize();
 
-        if (dist > 1.5) {
+        if (dist > 1.8) {
             const newPos = enemy.position.clone().addScaledVector(dir, enemy.userData.speed * delta);
             newPos.y = 1.0;
             if (!checkCollision(newPos, enemy.userData.radius)) {
                 enemy.position.copy(newPos);
             } else {
-                // Обход препятствия: пробуем сдвинуться вбок
+                // Обход
                 const side = new THREE.Vector3(-dir.z, 0, dir.x);
                 const tryPos = enemy.position.clone().addScaledVector(side, enemy.userData.speed * delta);
                 tryPos.y = 1.0;
@@ -529,7 +521,6 @@ function updateEnemies(delta) {
             if (health <= 0) gameOver();
         }
 
-        // Враг смотрит на игрока
         enemy.rotation.y = Math.atan2(dir.x, dir.z);
     });
 }
@@ -543,7 +534,7 @@ function animate() {
 }
 
 // ============================================
-// HUD И СОСТОЯНИЯ
+// HUD
 // ============================================
 function updateHUD() {
     document.getElementById('score').textContent = 'Счёт: ' + score + ' | Волна: ' + wave;
@@ -588,9 +579,6 @@ function restartGame() {
     startGame();
 }
 
-// ============================================
-// ЗАПУСК
-// ============================================
 window.addEventListener('load', () => {
     init();
     document.getElementById('startBtn').addEventListener('click', startGame);

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Shooter</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Меню -->
+    <div id="menu">
+        <h1>🎯 BROWSER SHOOTER</h1>
+        <p>Кликни, чтобы начать</p>
+        <button id="startBtn">ИГРАТЬ</button>
+        <div class="controls">
+            <p><b>WASD</b> — движение</p>
+            <p><b>Мышь</b> — прицел</p>
+            <p><b>ЛКМ</b> — выстрел</p>
+            <p><b>ESC</b> — пауза</p>
+        </div>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud" style="display:none;">
+        <div id="score">Счёт: 0</div>
+        <div id="health">❤️ 100</div>
+        <div id="ammo">🔫 30 / ∞</div>
+        <div id="crosshair">+</div>
+    </div>
+
+    <!-- Экран смерти -->
+    <div id="gameover" style="display:none;">
+        <h1>💀 ТЫ ПОГИБ</h1>
+        <p>Счёт: <span id="finalScore">0</span></p>
+        <button id="restartBtn">ЗАНОВО</button>
+    </div>
+
+    <!-- Подключаем Three.js через CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>

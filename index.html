@@ -114,6 +114,32 @@
   </div>
 </div>
 
+<!-- ЭКРАН РЕЖИМА ВЫЖИВАНИЯ -->
+<div id="survivalMenu" class="screen" style="display:none;">
+  <div class="wide-box">
+    <div class="top-bar">
+      <button id="backFromSurvival" class="btn-back">←</button>
+      <h2>РЕЖИМ ВЫЖИВАНИЯ</h2>
+      <div class="coins-display"><svg class="ico-sm"><use href="#icon-coin"/></svg> <span id="survivalCoins">0</span></div>
+    </div>
+
+    <div style="text-align:center;margin-bottom:20px;">
+      <p style="color:#aaa;font-family:'Courier New',monospace;font-size:13px;letter-spacing:2px;margin-bottom:20px;">
+        ВЫЖИВИ КАК МОЖНО ДОЛЬШЕ. ВРАГИ СТАНОВЯТСЯ СИЛЬНЕЕ КАЖДУЮ ВОЛНУ.
+      </p>
+      <div style="color:#ff6600;font-family:'Courier New',monospace;font-size:16px;letter-spacing:2px;margin-bottom:8px;">
+        🏆 РЕКОРД: <b id="survivalBest">0</b> волн
+      </div>
+    </div>
+
+    <h3 style="color:#888;font-family:'Courier New',monospace;font-size:14px;letter-spacing:3px;margin-bottom:15px;text-align:center;">
+      ВЫБЕРИ СЛОЖНОСТЬ
+    </h3>
+
+    <div class="survival-grid" id="survivalGrid"></div>
+  </div>
+</div>
+
 <!-- КАРТА УРОВНЕЙ -->
 <div id="map" class="screen" style="display:none;">
   <div class="wide-box">

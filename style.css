@@ -7,19 +7,18 @@
 
 body {
   overflow: hidden;
-  background: #050508;
+  background: #000;
   color: #fff;
 }
 
-/* Фоновый канвас (только для меню) */
 #bgCanvas {
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: 10;
   display: block;
+  background: #000;
 }
 
-/* ============ ЭКРАНЫ (меню, настройки, смерть) ============ */
 .screen {
   position: fixed;
   inset: 0;
@@ -29,7 +28,7 @@ body {
   z-index: 100;
   padding: 20px;
   overflow-y: auto;
-  background: radial-gradient(circle at 50% 40%, rgba(80, 0, 0, 0.35), rgba(0, 0, 0, 0.95) 70%);
+  background: #000;
 }
 
 .menu-box {
@@ -40,6 +39,8 @@ body {
   align-items: center;
   text-align: center;
   animation: fadeUp 0.7s ease-out;
+  position: relative;
+  z-index: 101;
 }
 
 @keyframes fadeUp {
@@ -47,19 +48,19 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ============ ЧЕРЕП ============ */
 .skull-img {
   width: 200px;
   height: auto;
   max-height: 240px;
   object-fit: contain;
   filter:
-    drop-shadow(0 0 30px rgba(255, 0, 51, 0.7))
-    drop-shadow(0 0 60px rgba(255, 0, 51, 0.4));
+    drop-shadow(0 0 30px rgba(255, 0, 51, 0.9))
+    drop-shadow(0 0 60px rgba(255, 0, 51, 0.5));
   animation: skullPulse 3s ease-in-out infinite;
   margin-bottom: 12px;
   user-select: none;
   -webkit-user-drag: none;
+  border-radius: 4px;
 }
 
 .skull-img.small {
@@ -72,7 +73,6 @@ body {
   50% { transform: scale(1.04); }
 }
 
-/* ============ ЗАГОЛОВОК ============ */
 .game-title {
   font-size: 64px;
   font-weight: 900;
@@ -113,7 +113,6 @@ body {
   font-family: 'Courier New', monospace;
 }
 
-/* ============ КНОПКИ ============ */
 .btn-primary {
   padding: 16px 55px;
   font-size: 20px;
@@ -166,12 +165,14 @@ body {
 .settings-box {
   max-width: 600px;
   width: 100%;
-  background: rgba(10, 12, 20, 0.95);
+  background: #0a0a0a;
   border: 2px solid #ff0033;
   border-radius: 8px;
   padding: 35px;
-  box-shadow: 0 0 60px rgba(255, 0, 51, 0.35), inset 0 0 40px rgba(80, 0, 0, 0.15);
+  box-shadow: 0 0 60px rgba(255, 0, 51, 0.35);
   animation: fadeUp 0.5s;
+  position: relative;
+  z-index: 101;
 }
 
 .settings-box h2 {
@@ -186,7 +187,7 @@ body {
 }
 
 .settings-block {
-  background: rgba(20, 10, 10, 0.6);
+  background: #111;
   border-left: 3px solid #ff0033;
   padding: 18px 22px;
   margin-bottom: 20px;
@@ -218,7 +219,7 @@ body {
 
 .ctrl-grid kbd {
   padding: 5px 12px;
-  background: #0a0a0a;
+  background: #000;
   border: 1px solid #ff0033;
   border-radius: 4px;
   font-family: 'Courier New', monospace;
@@ -257,7 +258,7 @@ body {
 }
 
 .settings-box select {
-  background: #0a0a0a;
+  background: #000;
   color: #fff;
   border: 1px solid #333;
   border-radius: 4px;
@@ -274,6 +275,57 @@ body {
 #closeSettings {
   margin-top: 10px;
   width: 100%;
+}
+
+/* ============ ПОДДЕРЖКА ============ */
+.support-block {
+  border-left-color: #00d4ff;
+  text-align: center;
+}
+
+.support-block h3 {
+  color: #00d4ff;
+}
+
+.support-text {
+  font-size: 13px;
+  color: #aaa;
+  margin-bottom: 14px;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+}
+
+.btn-support {
+  display: inline-block;
+  padding: 12px 30px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  background: linear-gradient(135deg, #0055aa, #00d4ff);
+  color: #fff;
+  text-decoration: none;
+  border: 2px solid #00d4ff;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: 0.25s;
+  text-transform: uppercase;
+  font-family: 'Impact', sans-serif;
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+  margin-bottom: 12px;
+}
+
+.btn-support:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 40px rgba(0, 212, 255, 0.9);
+  background: linear-gradient(135deg, #0077cc, #33ddff);
+}
+
+.support-email {
+  font-size: 12px;
+  color: #666;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+  margin-top: 6px;
 }
 
 /* ============ HUD ============ */
@@ -293,23 +345,9 @@ body {
   letter-spacing: 1px;
 }
 
-#score {
-  top: 20px;
-  left: 20px;
-  color: #00d4ff;
-}
-
-#health {
-  top: 20px;
-  right: 20px;
-  color: #ff4757;
-}
-
-#ammo {
-  bottom: 20px;
-  right: 20px;
-  color: #ffa502;
-}
+#score { top: 20px; left: 20px; color: #00d4ff; }
+#health { top: 20px; right: 20px; color: #ff4757; }
+#ammo { bottom: 20px; right: 20px; color: #ffa502; }
 
 #crosshair {
   position: absolute;
@@ -371,51 +409,15 @@ body {
 
 /* ============ МОБИЛЬНАЯ АДАПТАЦИЯ ============ */
 @media (max-width: 600px) {
-  .game-title {
-    font-size: 38px;
-    letter-spacing: 3px;
-  }
-
-  .skull-img {
-    width: 140px;
-    max-height: 170px;
-  }
-
-  .skull-img.small {
-    width: 90px;
-    max-height: 110px;
-  }
-
-  .btn-primary {
-    padding: 14px 35px;
-    font-size: 16px;
-    letter-spacing: 2px;
-  }
-
-  .btn-secondary {
-    padding: 10px 25px;
-    font-size: 13px;
-  }
-
-  .ctrl-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .settings-box {
-    padding: 22px;
-  }
-
-  .settings-box h2 {
-    font-size: 22px;
-    letter-spacing: 3px;
-  }
-
-  .death-title {
-    font-size: 44px;
-    letter-spacing: 5px;
-  }
-
-  .final-score-value {
-    font-size: 64px;
-  }
+  .game-title { font-size: 38px; letter-spacing: 3px; }
+  .skull-img { width: 140px; max-height: 170px; }
+  .skull-img.small { width: 90px; max-height: 110px; }
+  .btn-primary { padding: 14px 35px; font-size: 16px; letter-spacing: 2px; }
+  .btn-secondary { padding: 10px 25px; font-size: 13px; }
+  .btn-support { padding: 10px 22px; font-size: 12px; letter-spacing: 2px; }
+  .ctrl-grid { grid-template-columns: repeat(2, 1fr); }
+  .settings-box { padding: 22px; }
+  .settings-box h2 { font-size: 22px; letter-spacing: 3px; }
+  .death-title { font-size: 44px; letter-spacing: 5px; }
+  .final-score-value { font-size: 64px; }
 }

@@ -1,78 +1,135 @@
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Impact', 'Segoe UI', Tahoma, Arial, sans-serif; }
 html, body { overflow: hidden; background: #000; color: #fff; touch-action: none; -webkit-user-select: none; user-select: none; }
-
 #bgCanvas { position: fixed; inset: 0; z-index: 10; display: block; background: #000; }
 
-.screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; overflow-y: auto; background: #000; }
-.menu-box { max-width: 560px; width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; animation: fadeUp 0.7s ease-out; position: relative; z-index: 101; }
+.screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 100; padding: 15px; overflow-y: auto; background: #000; }
+.menu-box { max-width: 560px; width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; animation: fadeUp 0.5s; position: relative; z-index: 101; }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(25px); } to { opacity: 1; transform: translateY(0); } }
 
-.skull-img { width: 200px; height: auto; max-height: 240px; object-fit: contain; filter: drop-shadow(0 0 30px rgba(255,0,51,0.9)) drop-shadow(0 0 60px rgba(255,0,51,0.5)); animation: skullPulse 3s ease-in-out infinite; margin-bottom: 12px; border-radius: 4px; }
-.skull-img.small { width: 120px; max-height: 140px; }
+.skull-img { width: 180px; max-height: 220px; object-fit: contain; filter: drop-shadow(0 0 30px rgba(255,0,51,0.9)) drop-shadow(0 0 60px rgba(255,0,51,0.5)); animation: skullPulse 3s ease-in-out infinite; margin-bottom: 12px; border-radius: 4px; }
+.skull-img.small { width: 120px; }
 @keyframes skullPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
 
-.game-title { font-size: 64px; font-weight: 900; letter-spacing: 6px; line-height: 0.95; text-transform: uppercase; color: #f0f0f0; text-shadow: 0 0 20px rgba(255,255,255,0.3), 0 4px 0 #2a0000; margin-bottom: 6px; }
+.game-title { font-size: 60px; font-weight: 900; letter-spacing: 6px; line-height: 0.95; text-transform: uppercase; color: #f0f0f0; text-shadow: 0 0 20px rgba(255,255,255,0.3), 0 4px 0 #2a0000; margin-bottom: 6px; }
 .game-title .red { display: block; color: #ff0033; text-shadow: 0 0 25px rgba(255,0,51,0.9), 0 4px 0 #4a0000; }
-.tagline { font-size: 13px; color: #888; letter-spacing: 5px; margin-bottom: 4px; font-family: 'Courier New', monospace; font-weight: 700; }
-.version { font-size: 11px; color: #444; letter-spacing: 3px; margin-bottom: 30px; font-family: 'Courier New', monospace; }
+.tagline { font-size: 12px; color: #888; letter-spacing: 4px; margin-bottom: 4px; font-family: 'Courier New', monospace; font-weight: 700; }
+.version { font-size: 11px; color: #444; letter-spacing: 3px; margin-bottom: 15px; font-family: 'Courier New', monospace; }
 
-.btn-primary { padding: 16px 55px; font-size: 20px; font-weight: 800; letter-spacing: 4px; background: linear-gradient(135deg, #8a0000, #ff0033); color: #fff; border: 2px solid #ff0033; border-radius: 4px; cursor: pointer; transition: 0.25s; margin-bottom: 12px; text-transform: uppercase; box-shadow: 0 0 30px rgba(255,0,51,0.5); font-family: 'Impact', sans-serif; }
-.btn-primary:hover { transform: scale(1.06); box-shadow: 0 0 55px rgba(255,0,51,1); }
-.btn-secondary { padding: 12px 40px; font-size: 15px; font-weight: 700; letter-spacing: 3px; background: transparent; color: #bbb; border: 1px solid #444; border-radius: 4px; cursor: pointer; text-transform: uppercase; font-family: 'Impact', sans-serif; }
+.coins-display { font-size: 20px; color: #ffcc00; font-family: 'Courier New', monospace; font-weight: 900; letter-spacing: 2px; margin-bottom: 15px; text-shadow: 0 0 15px rgba(255,204,0,0.7); }
+
+.btn-primary { padding: 15px 45px; font-size: 18px; font-weight: 800; letter-spacing: 3px; background: linear-gradient(135deg, #8a0000, #ff0033); color: #fff; border: 2px solid #ff0033; border-radius: 4px; cursor: pointer; transition: 0.2s; margin-bottom: 10px; text-transform: uppercase; box-shadow: 0 0 25px rgba(255,0,51,0.5); font-family: 'Impact', sans-serif; width: 280px; max-width: 100%; }
+.btn-primary:hover { transform: scale(1.05); box-shadow: 0 0 50px rgba(255,0,51,1); }
+.btn-primary:active { transform: scale(0.98); }
+
+.btn-secondary { padding: 11px 30px; font-size: 14px; font-weight: 700; letter-spacing: 2px; background: transparent; color: #bbb; border: 1px solid #444; border-radius: 4px; cursor: pointer; text-transform: uppercase; font-family: 'Impact', sans-serif; margin-bottom: 8px; width: 280px; max-width: 100%; }
 .btn-secondary:hover { border-color: #ff0033; color: #ff4444; }
 
-.settings-box { max-width: 600px; width: 100%; background: #0a0a0a; border: 2px solid #ff0033; border-radius: 8px; padding: 35px; box-shadow: 0 0 60px rgba(255,0,51,0.35); position: relative; z-index: 101; max-height: 95vh; overflow-y: auto; }
-.settings-box h2 { font-size: 32px; letter-spacing: 6px; text-align: center; color: #ff0033; margin-bottom: 28px; text-transform: uppercase; }
-.settings-block { background: #111; border-left: 3px solid #ff0033; padding: 18px 22px; margin-bottom: 20px; border-radius: 4px; }
-.settings-block h3 { font-size: 13px; letter-spacing: 4px; color: #888; margin-bottom: 14px; text-transform: uppercase; font-family: 'Courier New', monospace; }
+.btn-danger { padding: 10px 20px; font-size: 13px; background: #4a0000; color: #fff; border: 1px solid #8a0000; border-radius: 4px; cursor: pointer; width: 100%; text-transform: uppercase; letter-spacing: 2px; font-family: 'Impact', sans-serif; }
+.btn-danger:hover { background: #6a0000; }
 
-.ctrl-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-.ctrl-grid > div { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.ctrl-grid kbd { padding: 4px 10px; background: #000; border: 1px solid #ff0033; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 11px; font-weight: 700; color: #ff6666; min-width: 50px; text-align: center; }
-.ctrl-grid span { font-size: 9px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+.btn-back { background: transparent; border: 1px solid #666; color: #fff; width: 42px; height: 42px; border-radius: 4px; cursor: pointer; font-size: 20px; font-family: 'Impact', sans-serif; }
+.btn-back:hover { border-color: #ff0033; color: #ff0033; }
 
-.settings-box label { display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 16px; font-family: 'Courier New', monospace; }
+/* ===== ШИРОКИЙ БЛОК (карта, магазин) ===== */
+.wide-box { max-width: 900px; width: 100%; background: #0a0a0a; border: 2px solid #ff0033; border-radius: 10px; padding: 25px; box-shadow: 0 0 60px rgba(255,0,51,0.4); position: relative; z-index: 101; max-height: 95vh; overflow-y: auto; }
+
+.top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 25px; gap: 15px; }
+.top-bar h2 { font-size: 26px; letter-spacing: 4px; color: #ff0033; text-transform: uppercase; font-family: 'Impact', sans-serif; text-shadow: 0 0 20px rgba(255,0,51,0.7); flex: 1; text-align: center; }
+.top-bar .coins-display { margin-bottom: 0; font-size: 18px; }
+
+/* ===== КАРТА УРОВНЕЙ ===== */
+.level-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 18px; padding: 10px 0; }
+
+.level-card { background: linear-gradient(135deg, #1a0000, #2a0000); border: 2px solid #ff0033; border-radius: 12px; padding: 20px 15px; text-align: center; cursor: pointer; transition: 0.25s; position: relative; overflow: hidden; }
+.level-card:hover:not(.locked) { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(255,0,51,0.7); }
+.level-card.locked { opacity: 0.45; cursor: not-allowed; border-color: #333; background: #0a0a0a; }
+.level-card.boss-level { border-color: #ff6600; background: linear-gradient(135deg, #2a0a00, #4a1a00); }
+.level-card .level-num { font-size: 48px; font-weight: 900; color: #ff0033; text-shadow: 0 0 20px rgba(255,0,51,0.9); line-height: 1; margin-bottom: 6px; }
+.level-card.boss-level .level-num { color: #ff6600; }
+.level-card .level-name { font-size: 14px; letter-spacing: 2px; color: #ddd; text-transform: uppercase; margin-bottom: 12px; font-family: 'Courier New', monospace; }
+.level-card .level-stars { font-size: 22px; letter-spacing: 3px; margin-top: 8px; }
+.level-card .level-stars .s-off { opacity: 0.15; }
+.level-card .lock-icon { font-size: 36px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.7; }
+.level-card .boss-icon { font-size: 24px; position: absolute; top: 8px; right: 10px; }
+
+/* ===== МАГАЗИН ===== */
+.shop-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+.shop-tab { flex: 1; padding: 12px; background: #111; border: 2px solid #333; border-radius: 6px; color: #aaa; cursor: pointer; font-size: 14px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; font-family: 'Impact', sans-serif; transition: 0.2s; }
+.shop-tab.active { background: linear-gradient(135deg, #8a0000, #ff0033); color: #fff; border-color: #ff0033; box-shadow: 0 0 20px rgba(255,0,51,0.6); }
+.shop-tab:hover:not(.active) { border-color: #666; color: #fff; }
+
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+
+.shop-item { background: #111; border: 2px solid #333; border-radius: 10px; padding: 18px; text-align: center; transition: 0.25s; }
+.shop-item.owned { border-color: #00cc66; background: linear-gradient(135deg, #001a0a, #002a10); }
+.shop-item.equipped { border-color: #ffcc00; box-shadow: 0 0 25px rgba(255,204,0,0.5); }
+.shop-item:hover { border-color: #ff0033; }
+
+.shop-item .item-icon { font-size: 48px; margin-bottom: 10px; }
+.shop-item .item-name { font-size: 16px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #fff; margin-bottom: 6px; font-family: 'Impact', sans-serif; }
+.shop-item .item-desc { font-size: 11px; color: #888; font-family: 'Courier New', monospace; margin-bottom: 12px; }
+.shop-item .item-price { font-size: 15px; color: #ffcc00; font-weight: 900; margin-bottom: 10px; letter-spacing: 1px; }
+.shop-item .item-btn { padding: 8px 18px; background: linear-gradient(135deg, #8a0000, #ff0033); border: 1px solid #ff0033; color: #fff; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; font-family: 'Impact', sans-serif; width: 100%; }
+.shop-item .item-btn:hover { box-shadow: 0 0 15px rgba(255,0,51,0.8); }
+.shop-item .item-btn:disabled { background: #222; border-color: #333; color: #555; cursor: not-allowed; box-shadow: none; }
+.shop-item .item-btn.equipped-btn { background: #00cc66; border-color: #00cc66; }
+
+/* ===== НАСТРОЙКИ ===== */
+.settings-box { max-width: 600px; width: 100%; background: #0a0a0a; border: 2px solid #ff0033; border-radius: 8px; padding: 30px; box-shadow: 0 0 60px rgba(255,0,51,0.35); max-height: 95vh; overflow-y: auto; position: relative; z-index: 101; }
+.settings-box h2 { font-size: 28px; letter-spacing: 5px; text-align: center; color: #ff0033; margin-bottom: 22px; text-transform: uppercase; }
+.settings-block { background: #111; border-left: 3px solid #ff0033; padding: 16px 20px; margin-bottom: 16px; border-radius: 4px; }
+.settings-block h3 { font-size: 12px; letter-spacing: 3px; color: #888; margin-bottom: 12px; text-transform: uppercase; font-family: 'Courier New', monospace; }
+.settings-box label { display: flex; flex-direction: column; gap: 6px; font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 14px; font-family: 'Courier New', monospace; }
 .settings-box input[type=range] { width: 100%; accent-color: #ff0033; }
-.settings-box select { background: #000; color: #fff; border: 1px solid #333; border-radius: 4px; padding: 10px; font-size: 14px; font-family: 'Courier New', monospace; }
-.toggle-label { flex-direction: row !important; align-items: center; gap: 10px !important; }
-.toggle-label input[type=checkbox] { accent-color: #ff0033; width: 18px; height: 18px; }
+.settings-box select { background: #000; color: #fff; border: 1px solid #333; border-radius: 4px; padding: 8px; font-size: 13px; font-family: 'Courier New', monospace; }
+.toggle-label { flex-direction: row !important; align-items: center; gap: 8px !important; }
+.toggle-label input[type=checkbox] { accent-color: #ff0033; width: 16px; height: 16px; }
 #closeSettings { margin-top: 10px; width: 100%; }
 
 .support-block { border-left-color: #00d4ff; text-align: center; }
 .support-block h3 { color: #00d4ff; }
-.support-text { font-size: 13px; color: #aaa; margin-bottom: 14px; font-family: 'Courier New', monospace; }
-.btn-support { display: inline-block; padding: 12px 30px; font-size: 14px; font-weight: 700; letter-spacing: 3px; background: linear-gradient(135deg, #0055aa, #00d4ff); color: #fff; text-decoration: none; border: 2px solid #00d4ff; border-radius: 4px; text-transform: uppercase; font-family: 'Impact', sans-serif; margin-bottom: 12px; }
-.support-email { font-size: 12px; color: #666; font-family: 'Courier New', monospace; }
+.btn-support { display: inline-block; padding: 10px 25px; font-size: 13px; font-weight: 700; letter-spacing: 2px; background: linear-gradient(135deg, #0055aa, #00d4ff); color: #fff; text-decoration: none; border: 2px solid #00d4ff; border-radius: 4px; text-transform: uppercase; font-family: 'Impact', sans-serif; margin-bottom: 8px; }
+.support-email { font-size: 11px; color: #666; font-family: 'Courier New', monospace; }
 
+/* ===== HUD ===== */
 #hud { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
-#score, #health, #ammo, #medkits { position: absolute; font-size: 20px; font-weight: 800; text-shadow: 0 2px 10px rgba(0,0,0,1); font-family: 'Courier New', monospace; }
-#score { top: 20px; left: 20px; color: #00d4ff; }
-#health { top: 20px; right: 20px; color: #ff4757; }
-#ammo { bottom: 20px; right: 20px; color: #ffa502; }
-#medkits { bottom: 20px; left: 20px; color: #4ade80; }
-#crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 24px; color: #00ff88; text-shadow: 0 0 10px #00ff88; }
-#interactPrompt { position: absolute; top: 60%; left: 50%; transform: translate(-50%,-50%); font-size: 18px; font-weight: 800; color: #ffdd00; font-family: 'Courier New', monospace; text-shadow: 0 0 15px rgba(255,221,0,0.9); display: none; background: rgba(0,0,0,0.6); padding: 8px 20px; border: 2px solid #ffdd00; border-radius: 4px; }
-#hitMarker { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 32px; color: #fff; font-weight: 900; opacity: 0; text-shadow: 0 0 10px #ff0000; }
+#score, #health, #ammo, #medkits { position: absolute; font-size: 18px; font-weight: 800; text-shadow: 0 2px 10px rgba(0,0,0,1); font-family: 'Courier New', monospace; }
+#score { top: 15px; left: 15px; color: #00d4ff; }
+#health { top: 15px; right: 15px; color: #ff4757; }
+#ammo { bottom: 15px; right: 15px; color: #ffa502; }
+#medkits { bottom: 15px; left: 15px; color: #4ade80; }
+#crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 22px; color: #00ff88; text-shadow: 0 0 10px #00ff88; }
+#interactPrompt { position: absolute; top: 60%; left: 50%; transform: translate(-50%,-50%); font-size: 16px; font-weight: 800; color: #ffdd00; font-family: 'Courier New', monospace; display: none; background: rgba(0,0,0,0.6); padding: 6px 16px; border: 2px solid #ffdd00; border-radius: 4px; }
+#hitMarker { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 30px; color: #fff; font-weight: 900; opacity: 0; text-shadow: 0 0 10px #ff0000; }
 #hitMarker.show { opacity: 1; }
 #damageVignette { position: absolute; inset: 0; background: radial-gradient(circle, transparent 35%, rgba(255,0,0,0.7)); opacity: 0; transition: opacity 0.25s; }
 
-.death-title { font-size: 72px; font-weight: 900; letter-spacing: 10px; color: #ff0033; text-transform: uppercase; text-shadow: 0 0 40px rgba(255,0,51,1); margin-bottom: 15px; }
-.final-score-label { font-size: 13px; color: #666; letter-spacing: 5px; text-transform: uppercase; font-family: 'Courier New', monospace; }
-.final-score-value { font-size: 100px; font-weight: 900; color: #00d4ff; text-shadow: 0 0 40px rgba(0,212,255,1); margin-bottom: 30px; font-family: 'Courier New', monospace; }
+#bossBar { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 600px; text-align: center; }
+#bossName { font-size: 16px; color: #ff6600; font-weight: 900; letter-spacing: 4px; text-shadow: 0 0 15px rgba(255,102,0,0.9); font-family: 'Impact', sans-serif; margin-bottom: 6px; }
+#bossHealthBar { height: 20px; background: rgba(0,0,0,0.7); border: 2px solid #ff6600; border-radius: 4px; overflow: hidden; }
+#bossHealthFill { height: 100%; background: linear-gradient(90deg, #ff6600, #ff0033); width: 100%; transition: width 0.3s; }
 
-/* ============ МОБИЛЬНЫЕ КОНТРОЛЫ ============ */
+/* ===== УРОВЕНЬ ПРОЙДЕН ===== */
+.complete-box { max-width: 500px; width: 100%; text-align: center; padding: 30px; background: rgba(10,0,0,0.95); border: 3px solid #00cc66; border-radius: 15px; box-shadow: 0 0 60px rgba(0,204,102,0.5); position: relative; z-index: 101; }
+.complete-box h1 { font-size: 36px; color: #00cc66; text-shadow: 0 0 25px rgba(0,204,102,0.9); margin-bottom: 25px; letter-spacing: 4px; font-family: 'Impact', sans-serif; }
+.star-display { display: flex; justify-content: center; gap: 20px; margin-bottom: 25px; }
+.star-display .star { font-size: 60px; filter: grayscale(1); opacity: 0.2; transition: 0.4s; transform: scale(0.5); }
+.star-display .star.active { filter: grayscale(0); opacity: 1; transform: scale(1); text-shadow: 0 0 30px rgba(255,204,0,0.9); }
+.complete-stats { font-size: 20px; color: #ffcc00; margin-bottom: 25px; font-family: 'Courier New', monospace; }
+.complete-stats b { font-size: 26px; }
+
+.death-title { font-size: 60px; font-weight: 900; letter-spacing: 8px; color: #ff0033; text-transform: uppercase; text-shadow: 0 0 40px rgba(255,0,51,1); margin-bottom: 15px; }
+.final-score-label { font-size: 14px; color: #888; letter-spacing: 4px; text-transform: uppercase; font-family: 'Courier New', monospace; margin-bottom: 20px; }
+
+/* ===== МОБИЛЬНЫЕ КОНТРОЛЫ ===== */
 #mobileControls { display: none; position: fixed; inset: 0; z-index: 60; pointer-events: none; }
-
 #joystickZone { position: absolute; left: 0; bottom: 0; width: 50%; height: 60%; pointer-events: auto; }
 #joystickBase { position: absolute; width: 130px; height: 130px; border-radius: 50%; background: rgba(255,0,51,0.15); border: 3px solid rgba(255,0,51,0.5); display: none; pointer-events: none; transform: translate(-50%, -50%); }
 #joystickKnob { position: absolute; width: 55px; height: 55px; border-radius: 50%; background: radial-gradient(circle, #ff0033, #8a0000); border: 2px solid #ff6666; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 20px rgba(255,0,51,0.8); }
-
-#actionButtons { position: absolute; right: 15px; bottom: 15px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 10px; pointer-events: none; }
-
-.mob-btn { width: 70px; height: 70px; border-radius: 50%; background: rgba(10,10,15,0.7); border: 2px solid rgba(255,0,51,0.6); color: #fff; font-size: 24px; font-family: 'Impact', sans-serif; cursor: pointer; pointer-events: auto; -webkit-tap-highlight-color: transparent; display: flex; align-items: center; justify-content: center; transition: transform 0.1s, background 0.1s; user-select: none; touch-action: manipulation; }
+#actionButtons { position: absolute; right: 15px; bottom: 15px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 10px; }
+.mob-btn { width: 65px; height: 65px; border-radius: 50%; background: rgba(10,10,15,0.75); border: 2px solid rgba(255,0,51,0.6); color: #fff; font-size: 22px; cursor: pointer; pointer-events: auto; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; user-select: none; touch-action: manipulation; }
 .mob-btn:active, .mob-btn.pressed { transform: scale(0.9); background: rgba(255,0,51,0.4); border-color: #ff0033; box-shadow: 0 0 25px rgba(255,0,51,0.9); }
-
-.mob-btn.shoot { width: 90px; height: 90px; font-size: 32px; grid-column: 3; grid-row: 1 / span 2; background: rgba(255,0,51,0.4); border-color: #ff0033; box-shadow: 0 0 20px rgba(255,0,51,0.5); }
+.mob-btn.shoot { width: 85px; height: 85px; font-size: 30px; grid-column: 3; grid-row: 1 / span 2; background: rgba(255,0,51,0.4); border-color: #ff0033; }
 .mob-btn.jump { background: rgba(0,150,255,0.3); border-color: #00aaff; }
 .mob-btn.medkit { background: rgba(0,200,100,0.3); border-color: #00cc66; }
 .mob-btn.weapon { background: rgba(255,170,0,0.3); border-color: #ffaa00; }
@@ -81,38 +138,32 @@ html, body { overflow: hidden; background: #000; color: #fff; touch-action: none
 
 @media (max-width: 900px) and (pointer: coarse), (hover: none) and (pointer: coarse) {
   #mobileControls { display: block; }
-  #crosshair { font-size: 20px; }
-  #score, #health, #ammo, #medkits { font-size: 16px; }
-  #score { top: 12px; left: 12px; }
-  #health { top: 12px; right: 12px; }
-  #ammo { bottom: 100px; right: 15px; }
-  #medkits { bottom: 100px; left: 15px; }
-
-  .game-title { font-size: 42px; letter-spacing: 3px; }
-  .skull-img { width: 130px; max-height: 160px; }
+  #crosshair { font-size: 18px; }
+  #score, #health, #ammo, #medkits { font-size: 15px; }
+  #score { top: 10px; left: 10px; }
+  #health { top: 10px; right: 10px; }
+  #ammo { bottom: 95px; right: 12px; }
+  #medkits { bottom: 95px; left: 12px; }
+  .game-title { font-size: 42px; }
+  .skull-img { width: 130px; }
   .skull-img.small { width: 90px; }
-  .btn-primary { padding: 14px 35px; font-size: 16px; }
-  .btn-secondary { padding: 10px 25px; font-size: 13px; }
-  .ctrl-grid { grid-template-columns: repeat(3, 1fr); }
-  .settings-box { padding: 20px; }
-  .settings-box h2 { font-size: 22px; }
-  .death-title { font-size: 44px; }
-  .final-score-value { font-size: 64px; }
-  .mob-btn { width: 60px; height: 60px; font-size: 20px; }
-  .mob-btn.shoot { width: 80px; height: 80px; font-size: 28px; }
+  .btn-primary { padding: 12px 30px; font-size: 15px; }
+  .btn-secondary { padding: 9px 20px; font-size: 12px; }
+  .settings-box, .wide-box { padding: 18px; }
+  .settings-box h2, .top-bar h2 { font-size: 20px; }
+  .death-title { font-size: 42px; }
+  .complete-box h1 { font-size: 26px; }
+  .star-display .star { font-size: 45px; }
+  .level-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .level-card .level-num { font-size: 36px; }
+  .shop-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .shop-item { padding: 14px; }
+  .shop-item .item-icon { font-size: 36px; }
+  #bossBar { top: 50px; }
 }
-
-@media (max-width: 500px) {
+@media (max-width: 480px) {
   .mob-btn { width: 55px; height: 55px; font-size: 18px; }
   .mob-btn.shoot { width: 75px; height: 75px; font-size: 26px; }
   #joystickBase { width: 110px; height: 110px; }
   #joystickKnob { width: 48px; height: 48px; }
-}
-
-@media (orientation: landscape) and (max-height: 500px) {
-  .mob-btn { width: 50px; height: 50px; font-size: 18px; }
-  .mob-btn.shoot { width: 70px; height: 70px; font-size: 24px; }
-  #joystickBase { width: 100px; height: 100px; }
-  #joystickKnob { width: 45px; height: 45px; }
-  #actionButtons { gap: 6px; }
 }

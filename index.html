@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
 <canvas id="bgCanvas"></canvas>
 
 <!-- МЕНЮ -->
@@ -16,7 +17,7 @@
 
     <h1 class="game-title">ZOMBIE<span class="red">SHOOT</span></h1>
     <p class="tagline">ВЫЖИВИ В ЗОНЕ ЗАРАЖЕНИЯ</p>
-    <div class="version">v5.0 · ALPHA</div>
+    <div class="version">v6.3 · ALPHA</div>
 
     <button id="startBtn" class="btn-primary">▶ ИГРАТЬ</button>
     <button id="settingsBtn" class="btn-secondary">⚙ НАСТРОЙКИ</button>
@@ -46,7 +47,7 @@
         <input type="range" id="sensSlider" min="1" max="20" value="5">
       </label>
       <label>Громкость
-        <input type="range" id="volSlider" min="0" max="100" value="70">
+        <input type="range" id="volSlider" min="0" max="100" value="50">
       </label>
       <label>Качество
         <select id="qualitySelect">
@@ -55,6 +56,16 @@
           <option value="low">Низкое</option>
         </select>
       </label>
+    </div>
+
+    <!-- БЛОК ПОДДЕРЖКИ -->
+    <div class="settings-block support-block">
+      <h3>ПОДДЕРЖКА</h3>
+      <p class="support-text">Нашли баг, есть идея или вопрос?</p>
+      <a href="mailto:nemo94314@gmail.com?subject=ZOMBIESHOOT%20—%20Обратная%20связь&body=Опишите%20проблему%20или%20идею:" class="btn-support">
+        ✉ НАПИСАТЬ НА ПОЧТУ
+      </a>
+      <p class="support-email">nemo94314@gmail.com</p>
     </div>
 
     <button id="closeSettings" class="btn-primary">← НАЗАД</button>
@@ -74,7 +85,6 @@
 <div id="gameover" class="screen" style="display:none;">
   <div class="menu-box">
     <img src="skull.png" alt="ZOMBIESHOOT" class="skull-img small">
-
     <h1 class="death-title">ТЫ ПОГИБ</h1>
     <p class="final-score-label">ТВОЙ РЕЗУЛЬТАТ</p>
     <p class="final-score-value"><span id="finalScore">0</span></p>
@@ -85,37 +95,137 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="game.js"></script>
 <script>
-// Фоновые частицы (только для меню)
+// ========== ФОН ДЛЯ МЕНЮ ==========
 const bg = document.getElementById('bgCanvas');
 const bctx = bg.getContext('2d');
-function resize(){ bg.width = innerWidth; bg.height = innerHeight; }
-resize(); addEventListener('resize', resize);
 
-const pts = Array.from({length: 100}, () => ({
-  x: Math.random()*bg.width, y: Math.random()*bg.height,
-  vx: (Math.random()-0.5)*0.4, vy: (Math.random()-0.5)*0.4,
-  r: Math.random()*2+0.5, a: Math.random()*0.4+0.1
+function resizeBg(){ bg.width = innerWidth; bg.height = innerHeight; }
+resizeBg();
+addEventListener('resize', resizeBg);
+
+const pts = Array.from({length: 120}, () => ({
+  x: Math.random() * bg.width,
+  y: Math.random() * bg.height,
+  vx: (Math.random() - 0.5) * 0.4,
+  vy: (Math.random() - 0.5) * 0.4,
+  r: Math.random() * 2 + 0.5,
+  a: Math.random() * 0.5 + 0.15
 }));
 
 function drawBG(){
-  bctx.fillStyle = '#07080f';
+  bctx.fillStyle = '#000000';
+  bctx.fillRect(0, 0, bg.width, bg.height);
+
+  const g = bctx.createRadialGradient(
+    bg.width/2, bg.height/2, 100,
+    bg.width/2, bg.height/2, Math.max(bg.width, bg.height)/1.5
+  );
+  g.addColorStop(0, 'rgba(60,0,0,0.15)');
+  g.addColorStop(1, 'rgba(0,0,0,0.9)');
+  bctx.fillStyle = g;
   bctx.fillRect(0, 0, bg.width, bg.height);
 
   pts.forEach(p => {
     p.x += p.vx; p.y += p.vy;
     if (p.x < 0 || p.x > bg.width) p.vx *= -1;
     if (p.y < 0 || p.y > bg.height) p.vy *= -1;
+
     bctx.beginPath();
     bctx.arc(p.x, p.y, p.r, 0, 6.28);
-    bctx.fillStyle = `rgba(200,40,40,${p.a})`;
+    bctx.fillStyle = `rgba(220,40,40,${p.a})`;
     bctx.shadowColor = '#ff0033';
-    bctx.shadowBlur = 8;
+    bctx.shadowBlur = 10;
     bctx.fill();
     bctx.shadowBlur = 0;
   });
+
   requestAnimationFrame(drawBG);
 }
 drawBG();
+
+// ========== ФОНОВАЯ МУЗЫКА ==========
+let musicCtx = null;
+let musicNodes = [];
+let musicPlaying = false;
+
+function startMusic(){
+  if (musicPlaying) return;
+  try {
+    musicCtx = new (window.AudioContext || window.webkitAudioContext)();
+    musicPlaying = true;
+    playAmbientMusic();
+  } catch(e) { console.warn('Музыка недоступна', e); }
+}
+
+function playAmbientMusic(){
+  if (!musicCtx || musicCtx.state === 'closed') return;
+  const now = musicCtx.currentTime;
+
+  const bass = musicCtx.createOscillator();
+  const bassGain = musicCtx.createGain();
+  bass.type = 'sawtooth';
+  bass.frequency.setValueAtTime(55, now);
+  bassGain.gain.setValueAtTime(0.08, now);
+  bass.connect(bassGain);
+  bassGain.connect(musicCtx.destination);
+  bass.start(now);
+  bass.stop(now + 4);
+  musicNodes.push(bass);
+
+  const pad = musicCtx.createOscillator();
+  const padGain = musicCtx.createGain();
+  const filter = musicCtx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(400, now);
+  pad.type = 'sine';
+  pad.frequency.setValueAtTime(110, now);
+  padGain.gain.setValueAtTime(0, now);
+  padGain.gain.linearRampToValueAtTime(0.06, now + 0.5);
+  padGain.gain.linearRampToValueAtTime(0, now + 3.8);
+  pad.connect(filter);
+  filter.connect(padGain);
+  padGain.connect(musicCtx.destination);
+  pad.start(now);
+  pad.stop(now + 4);
+  musicNodes.push(pad);
+
+  if (Math.random() > 0.5) {
+    const high = musicCtx.createOscillator();
+    const highGain = musicCtx.createGain();
+    high.type = 'triangle';
+    high.frequency.setValueAtTime(880, now + 1);
+    high.frequency.exponentialRampToValueAtTime(660, now + 2.5);
+    highGain.gain.setValueAtTime(0, now + 1);
+    highGain.gain.linearRampToValueAtTime(0.02, now + 1.3);
+    highGain.gain.linearRampToValueAtTime(0, now + 2.8);
+    high.connect(highGain);
+    highGain.connect(musicCtx.destination);
+    high.start(now + 1);
+    high.stop(now + 3);
+    musicNodes.push(high);
+  }
+
+  setTimeout(() => {
+    if (musicPlaying) playAmbientMusic();
+  }, 4000);
+}
+
+function stopMusic(){
+  musicPlaying = false;
+  musicNodes.forEach(n => { try { n.stop(); } catch(e){} });
+  musicNodes = [];
+  if (musicCtx) {
+    try { musicCtx.close(); } catch(e){}
+    musicCtx = null;
+  }
+}
+
+document.addEventListener('click', () => {
+  if (!musicPlaying) startMusic();
+}, { once: true });
+
+window.stopBackgroundMusic = stopMusic;
+window.startBackgroundMusic = startMusic;
 </script>
 </body>
 </html>

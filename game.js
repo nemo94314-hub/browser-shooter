@@ -70,29 +70,10 @@ const SKINS = {
   ghost:    { name:'Призрак', body:0x666666, head:0x999999, cost:1000 }
 };
 
-// ============ АПГРЕЙДЫ ============
 const UPGRADES = {
-  damage: {
-    name:'Урон',
-    icon:'💥',
-    desc:'+10% урона за уровень',
-    maxLevel: 5,
-    costs: [200, 400, 600, 800, 1000]
-  },
-  reload: {
-    name:'Скорость перезарядки',
-    icon:'⚡',
-    desc:'−10% времени перезарядки',
-    maxLevel: 5,
-    costs: [150, 300, 450, 600, 750]
-  },
-  health: {
-    name:'Здоровье',
-    icon:'❤️',
-    desc:'+20 к максимальному HP',
-    maxLevel: 5,
-    costs: [250, 500, 750, 1000, 1250]
-  }
+  damage: { name:'Урон', icon:'💥', desc:'+10% урона за уровень', maxLevel: 5, costs: [200, 400, 600, 800, 1000] },
+  reload: { name:'Скорость перезарядки', icon:'⚡', desc:'−10% времени перезарядки', maxLevel: 5, costs: [150, 300, 450, 600, 750] },
+  health: { name:'Здоровье', icon:'❤️', desc:'+20 к максимальному HP', maxLevel: 5, costs: [250, 500, 750, 1000, 1250] }
 };
 
 function getDamageMultiplier() { return 1 + 0.1 * (PROGRESS.upgrades?.damage || 0); }
@@ -105,7 +86,9 @@ let hitsTaken = 0;
 let isGameActive = false;
 let enemies = [], obstacles = [], enemyBullets = [], grenades = [], lootCrates = [], corpses = [], bloodStains = [];
 let particles = [];
-let currentBoss = null, bossMaxHealth = 0;
+let currentBoss = null, bossMaxHealth = 0, bossPhase = 1;
+let playerGrenades = 3;
+const MAX_PLAYER_GRENADES = 5;
 let clock = new THREE.Clock();
 let yaw = 0, pitch = 0, recoilPitch = 0;
 let verticalVelocity = 0, playerY = 1.7, isJumping = false;
@@ -135,6 +118,130 @@ let footstepTimer = 0;
 let lastFootstepTime = 0;
 let zombieWhisperTimer = null;
 
+// ============ ДИНАМИЧЕСКАЯ МУЗЫКА ============
+let musicState = { calmGain:null, combatGain:null, calmOsc:null, combatOsc:null, combatRhythm:null, intensity: 0, running: false };
+
+function startDynamicMusic() {
+  if (!audioCtx || musicState.running) return;
+  musicState.running = true;
+
+  // === СПОКОЙНЫЙ СЛОЙ: низкий дрон + редкие высокие ноты ===
+  const calmGain = audioCtx.createGain();
+  calmGain.gain.setValueAtTime(0.06 * volume, audioCtx.currentTime);
+  calmGain.connect(audioCtx.destination);
+
+  const calmOsc = audioCtx.createOscillator();
+  calmOsc.type = 'sine';
+  calmOsc.frequency.setValueAtTime(55, audioCtx.currentTime);
+  const calmFilter = audioCtx.createBiquadFilter();
+  calmFilter.type = 'lowpass'; calmFilter.frequency.setValueAtTime(200, audioCtx.currentTime);
+  const calmOsc2 = audioCtx.createOscillator();
+  calmOsc2.type = 'sine';
+  calmOsc2.frequency.setValueAtTime(82.5, audioCtx.currentTime); // квинта
+  const calmGain2 = audioCtx.createGain();
+  calmGain2.gain.setValueAtTime(0.4, audioCtx.currentTime);
+
+  calmOsc.connect(calmFilter); calmFilter.connect(calmGain);
+  calmOsc2.connect(calmGain2); calmGain2.connect(calmGain);
+  calmOsc.start(); calmOsc2.start();
+
+  // Медленное "дыхание" спокойного слоя
+  const lfo = audioCtx.createOscillator();
+  lfo.type = 'sine'; lfo.frequency.setValueAtTime(0.1, audioCtx.currentTime);
+  const lfoGain = audioCtx.createGain();
+  lfoGain.gain.setValueAtTime(0.02 * volume, audioCtx.currentTime);
+  lfo.connect(lfoGain); lfoGain.connect(calmGain.gain);
+  lfo.start();
+
+  // === БОЕВОЙ СЛОЙ: быстрый бас + пульсация ===
+  const combatGain = audioCtx.createGain();
+  combatGain.gain.setValueAtTime(0, audioCtx.currentTime); // начинаем с 0
+  combatGain.connect(audioCtx.destination);
+
+  // Басовая пульсация
+  const combatOsc = audioCtx.createOscillator();
+  combatOsc.type = 'sawtooth';
+  combatOsc.frequency.setValueAtTime(40, audioCtx.currentTime);
+  const combatFilter = audioCtx.createBiquadFilter();
+  combatFilter.type = 'lowpass'; combatFilter.frequency.setValueAtTime(400, audioCtx.currentTime);
+  const bassGain = audioCtx.createGain();
+  bassGain.gain.setValueAtTime(0, audioCtx.currentTime);
+  combatOsc.connect(combatFilter); combatFilter.connect(bassGain); bassGain.connect(combatGain);
+  combatOsc.start();
+
+  // Ритм баса: 4 удара в секунду
+  function scheduleBassHit() {
+    if (!musicState.running) return;
+    const t = audioCtx.currentTime;
+    bassGain.gain.cancelScheduledValues(t);
+    bassGain.gain.setValueAtTime(0.35, t);
+    bassGain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+    setTimeout(scheduleBassHit, 260);
+  }
+  scheduleBassHit();
+
+  // Высокие тревожные ноты — каждые 2 секунды
+  function scheduleHighNote() {
+    if (!musicState.running) return;
+    const t = audioCtx.currentTime;
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = 'square';
+    const freqs = [330, 392, 440, 349];
+    o.frequency.setValueAtTime(freqs[Math.floor(Math.random() * freqs.length)], t);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.05, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+    o.connect(g); g.connect(combatGain);
+    o.start(t); o.stop(t + 0.45);
+    setTimeout(scheduleHighNote, 2000);
+  }
+  scheduleHighNote();
+
+  musicState.calmGain = calmGain;
+  musicState.combatGain = combatGain;
+  musicState.calmOsc = calmOsc;
+  musicState.combatOsc = combatOsc;
+  musicState.bassGain = bassGain;
+}
+
+function stopDynamicMusic() {
+  musicState.running = false;
+  try { musicState.calmOsc?.stop(); } catch(e){}
+  try { musicState.combatOsc?.stop(); } catch(e){}
+  try {
+    if (musicState.calmGain) musicState.calmGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5);
+    if (musicState.combatGain) musicState.combatGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5);
+  } catch(e){}
+  musicState = { calmGain:null, combatGain:null, calmOsc:null, combatOsc:null, combatRhythm:null, intensity: 0, running: false };
+}
+
+function updateMusicIntensity() {
+  if (!audioCtx || !musicState.running || !isGameActive) return;
+  // Определяем "боевое напряжение" — близость зомби
+  let maxThreat = 0;
+  const playerPos = camera.position;
+  for (const e of enemies) {
+    const d = e.position.distanceTo(playerPos);
+    if (d < 30) {
+      const threat = (1 - d / 30) * (e.userData.isBoss ? 1.5 : 1);
+      if (threat > maxThreat) maxThreat = threat;
+    }
+  }
+  // Плавно приближаем intensity к цели
+  const target = Math.min(1, maxThreat);
+  musicState.intensity += (target - musicState.intensity) * 0.05;
+
+  const t = audioCtx.currentTime;
+  const calmVol = (1 - musicState.intensity) * 0.06 * volume;
+  const combatVol = musicState.intensity * 0.12 * volume;
+  try {
+    musicState.calmGain.gain.cancelScheduledValues(t);
+    musicState.combatGain.gain.cancelScheduledValues(t);
+    musicState.calmGain.gain.linearRampToValueAtTime(calmVol, t + 0.3);
+    musicState.combatGain.gain.linearRampToValueAtTime(combatVol, t + 0.3);
+  } catch(e){}
+}
+
 // ============ ЗВУКИ ============
 function playFootstepSound() {
   if (!audioCtx || !isGameActive) return;
@@ -161,8 +268,7 @@ function playZombieGroan(pos) {
   const vol = (1 - dist / 35) * 0.25 * volume;
   if (vol < 0.01) return;
   const o = audioCtx.createOscillator(), g = audioCtx.createGain(), filter = audioCtx.createBiquadFilter();
-  filter.type = 'lowpass';
-  filter.frequency.setValueAtTime(500, audioCtx.currentTime);
+  filter.type = 'lowpass'; filter.frequency.setValueAtTime(500, audioCtx.currentTime);
   o.type = 'sawtooth';
   const base = 70 + Math.random() * 40;
   o.frequency.setValueAtTime(base, audioCtx.currentTime);
@@ -172,6 +278,33 @@ function playZombieGroan(pos) {
   g.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.75);
   o.connect(filter); filter.connect(g); g.connect(audioCtx.destination);
   o.start(); o.stop(audioCtx.currentTime + 0.85);
+}
+
+function playBossRoar() {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain(), f = audioCtx.createBiquadFilter();
+  o.type = 'sawtooth';
+  o.frequency.setValueAtTime(60, now);
+  o.frequency.linearRampToValueAtTime(120, now + 0.3);
+  o.frequency.linearRampToValueAtTime(45, now + 1.2);
+  f.type = 'lowpass'; f.frequency.setValueAtTime(800, now);
+  g.gain.setValueAtTime(0, now);
+  g.gain.linearRampToValueAtTime(0.4 * volume, now + 0.15);
+  g.gain.linearRampToValueAtTime(0.001, now + 1.4);
+  o.connect(f); f.connect(g); g.connect(audioCtx.destination);
+  o.start(now); o.stop(now + 1.5);
+
+  // Реверберация-эхо
+  const o2 = audioCtx.createOscillator(), g2 = audioCtx.createGain();
+  o2.type = 'triangle';
+  o2.frequency.setValueAtTime(90, now);
+  o2.frequency.exponentialRampToValueAtTime(40, now + 1.5);
+  g2.gain.setValueAtTime(0, now + 0.3);
+  g2.gain.linearRampToValueAtTime(0.15 * volume, now + 0.5);
+  g2.gain.exponentialRampToValueAtTime(0.001, now + 1.8);
+  o2.connect(g2); g2.connect(audioCtx.destination);
+  o2.start(now + 0.3); o2.stop(now + 2);
 }
 
 function startHorrorAmbient() {
@@ -339,7 +472,6 @@ function playErrorSound() {
   o.start(now); o.stop(now + 0.21);
 }
 
-// ============ ХЕДШОТЫ ============
 function playHeadshotSound() {
   if (!audioCtx) return;
   const now = audioCtx.currentTime;
@@ -393,9 +525,7 @@ function createBloodBurst(pos, isHead) {
   const baseColor = isHead ? 0xbb0000 : 0x880000;
   for (let i = 0; i < count; i++) {
     const vel = new THREE.Vector3((Math.random() - 0.5) * 6, Math.random() * 4 + 1, (Math.random() - 0.5) * 6);
-    const size = 0.035 + Math.random() * 0.055;
-    const life = 0.5 + Math.random() * 0.6;
-    spawnParticle(pos, vel, baseColor, size, life, true);
+    spawnParticle(pos, vel, baseColor, 0.035 + Math.random() * 0.055, 0.5 + Math.random() * 0.6, true);
   }
   for (let i = 0; i < 5; i++) {
     const vel = new THREE.Vector3((Math.random() - 0.5) * 2, Math.random() * 1.5 + 0.3, (Math.random() - 0.5) * 2);
@@ -422,7 +552,6 @@ function createShellCasing() {
   casing.position.copy(worldPos).add(right.clone().multiplyScalar(0.15)).add(up.clone().multiplyScalar(0.05));
   const ejectVel = right.clone().multiplyScalar(1.8 + Math.random() * 0.8);
   ejectVel.y += 1.5 + Math.random() * 0.8;
-  ejectVel.z += (Math.random() - 0.5) * 0.8;
   casing.userData = {
     velocity: ejectVel, life: 2.5, maxLife: 2.5, gravity: true,
     spin: new THREE.Vector3(Math.random() * 25 - 12, Math.random() * 25 - 12, Math.random() * 25 - 12)
@@ -448,9 +577,7 @@ function updateParticles(delta) {
     const p = particles[i];
     p.userData.life -= delta;
     if (p.userData.life <= 0) {
-      scene.remove(p);
-      particles.splice(i, 1);
-      continue;
+      scene.remove(p); particles.splice(i, 1); continue;
     }
     if (p.userData.gravity) p.userData.velocity.y -= GRAVITY * delta;
     p.position.add(p.userData.velocity.clone().multiplyScalar(delta));
@@ -653,15 +780,28 @@ function createWeapon(type) {
   camera.add(weaponGroup);
 }
 
-// ============ ЗОМБИ ============
-function createZombie(isBoss) {
+// ============ ЗОМБИ (с разными моделями) ============
+function createZombie(isBoss, type = 'melee') {
   const g = new THREE.Group();
   const sk = SKINS[PROGRESS.currentSkin] || SKINS.default;
-  const skin = new THREE.MeshStandardMaterial({ color: isBoss ? 0x6a2a2a : 0x3a5a2a });
-  const uniform = new THREE.MeshStandardMaterial({ color: isBoss ? 0x4a1a1a : sk.body });
-  const dark = new THREE.MeshStandardMaterial({ color: 0x1a1a1a });
-  const glow = new THREE.MeshBasicMaterial({ color: isBoss ? 0xff6600 : 0xaa0000 });
   const size = isBoss ? 1.8 : 1;
+
+  // Цвета в зависимости от типа
+  let bodyColor, headColor, eyeColor;
+  if (isBoss) {
+    bodyColor = 0x4a1a1a; headColor = 0x6a2a2a; eyeColor = 0xff6600;
+  } else if (type === 'shooter') {
+    bodyColor = 0x2a2a3a; headColor = 0x5a5a3a; eyeColor = 0xffcc00; // Тёмно-синий, жёлтые глаза
+  } else if (type === 'grenadier') {
+    bodyColor = 0x2a4a2a; headColor = 0x3a5a3a; eyeColor = 0x00ff66; // Тёмно-зелёный, зелёные глаза
+  } else {
+    bodyColor = sk.body; headColor = 0x5a6a3a; eyeColor = 0xaa0000; // По умолчанию
+  }
+
+  const skin = new THREE.MeshStandardMaterial({ color: headColor });
+  const uniform = new THREE.MeshStandardMaterial({ color: bodyColor });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x1a1a1a });
+  const glow = new THREE.MeshBasicMaterial({ color: eyeColor });
 
   const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.35 * size, 0.32 * size, 1.0 * size, 8), uniform);
   torso.position.y = 0.5 * size; torso.castShadow = true; g.add(torso);
@@ -681,30 +821,78 @@ function createZombie(isBoss) {
   const lR = new THREE.Mesh(legGeo, dark);
   lR.position.set(0.18 * size, -0.4 * size, 0); g.add(lR);
 
+  // ОРУЖИЕ / АКСЕССУАРЫ ПО ТИПУ
+  if (!isBoss) {
+    if (type === 'shooter') {
+      // Винтовка в руках
+      const gunMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9, roughness: 0.3 });
+      const rifle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.1, 0.7), gunMat);
+      rifle.position.set(0.35 * size, 0.9 * size, -0.35 * size);
+      rifle.rotation.z = -0.15;
+      g.add(rifle);
+      // Сумка с патронами
+      const bag = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.25, 0.15), new THREE.MeshStandardMaterial({ color: 0x3a2a1a }));
+      bag.position.set(0, 0.5 * size, 0.3 * size);
+      g.add(bag);
+    } else if (type === 'grenadier') {
+      // Сумка с гранатами
+      const bagMat = new THREE.MeshStandardMaterial({ color: 0x4a6a3a });
+      const bag = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.2), bagMat);
+      bag.position.set(0, 0.5 * size, 0.35 * size);
+      g.add(bag);
+      // Гранаты-шарики на поясе
+      for (let i = 0; i < 3; i++) {
+        const gre = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 6), new THREE.MeshStandardMaterial({ color: 0x2a5a2a }));
+        gre.position.set(-0.15 + i * 0.15, 0.35 * size, 0.35 * size);
+        g.add(gre);
+      }
+    }
+  } else {
+    // БОСС: рога и дополнительная броня
+    const hornMat = new THREE.MeshStandardMaterial({ color: 0xaa8866 });
+    const hornL = new THREE.Mesh(new THREE.ConeGeometry(0.1 * size, 0.5 * size, 6), hornMat);
+    hornL.position.set(-0.2 * size, 1.75 * size, 0);
+    hornL.rotation.z = 0.5;
+    g.add(hornL);
+    const hornR = new THREE.Mesh(new THREE.ConeGeometry(0.1 * size, 0.5 * size, 6), hornMat);
+    hornR.position.set(0.2 * size, 1.75 * size, 0);
+    hornR.rotation.z = -0.5;
+    g.add(hornR);
+    // Свечение
+    const aura = new THREE.PointLight(0xff3300, 1.5, 8);
+    aura.position.y = 1.2 * size;
+    aura.userData.isBossAura = true;
+    g.add(aura);
+  }
+
   g.position.y = 0.9 * size;
   return g;
 }
 
 // ============ СПАВН ============
-function spawnEnemy(isBoss = false) {
+function spawnEnemy(isBoss = false, forcedType = null) {
   if (!isGameActive) return;
   const lvl = LEVELS[currentLevel] || LEVELS[1];
   if (!isBoss && enemies.length >= lvl.maxEnemies) return;
 
-  const e = createZombie(isBoss);
+  let type = 'melee';
+  if (!isBoss) {
+    if (forcedType) {
+      type = forcedType;
+    } else {
+      const r = Math.random();
+      if (r < lvl.shooterChance) type = 'shooter';
+      else if (r < lvl.shooterChance + lvl.grenadierChance) type = 'grenadier';
+    }
+  }
+
+  const e = createZombie(isBoss, type);
   const range = isBoss ? 20 : 45;
   const sides = [[-range,0],[range,0],[0,-range],[0,range],[-range,-range],[-range,range],[range,-range],[range,range]];
   const s = sides[Math.floor(Math.random() * sides.length)];
   e.position.set(s[0] + (Math.random() - 0.5) * 3, 0.9 * (isBoss ? 1.8 : 1), s[1] + (Math.random() - 0.5) * 3);
 
-  let type = 'melee';
-  if (!isBoss) {
-    const r = Math.random();
-    if (r < lvl.shooterChance) type = 'shooter';
-    else if (r < lvl.shooterChance + lvl.grenadierChance) type = 'grenadier';
-  }
-
-  const baseHealth = isBoss ? 1500 : lvl.enemyHealth;
+  const baseHealth = isBoss ? 2000 : lvl.enemyHealth;
   e.userData = {
     type, isBoss: !!isBoss,
     health: baseHealth, maxHealth: baseHealth,
@@ -712,7 +900,10 @@ function spawnEnemy(isBoss = false) {
     radius: isBoss ? 1.2 : 0.5,
     walkPhase: Math.random() * Math.PI * 2,
     nextShotTime: performance.now() + 2000 + Math.random() * 3000,
-    weaponDrop: type === 'shooter' ? 'rifle' : (type === 'grenadier' ? 'shotgun' : 'pistol')
+    weaponDrop: type === 'shooter' ? 'rifle' : (type === 'grenadier' ? 'shotgun' : 'pistol'),
+    phase: 1,
+    nextSummonTime: performance.now() + 8000,
+    phaseChanged: false
   };
   scene.add(e);
   e.userData.lastShot = 0;
@@ -721,7 +912,83 @@ function spawnEnemy(isBoss = false) {
   if (isBoss) {
     currentBoss = e;
     bossMaxHealth = e.userData.maxHealth;
+    bossPhase = 1;
+    playBossRoar();
+    showMessage('👹 БОСС ПРОБУДИЛСЯ!', 3000);
+    shakeAmount = 1;
   }
+}
+
+// ============ БОСС: ФАЗЫ ============
+function checkBossPhase() {
+  if (!currentBoss || !currentBoss.userData) return;
+  const hpRatio = currentBoss.userData.health / currentBoss.userData.maxHealth;
+  const ud = currentBoss.userData;
+  let newPhase = 1;
+  if (hpRatio <= 0.33) newPhase = 3;
+  else if (hpRatio <= 0.66) newPhase = 2;
+
+  if (newPhase !== ud.phase) {
+    ud.phase = newPhase;
+    bossPhase = newPhase;
+    playBossRoar();
+    shakeAmount = 1;
+
+    // Визуальные изменения
+    currentBoss.traverse(child => {
+      if (child.isMesh && child.material && child.material.color) {
+        if (newPhase === 2) {
+          child.material = child.material.clone();
+          child.material.color.setHex(0x8a3a1a);
+        } else if (newPhase === 3) {
+          child.material = child.material.clone();
+          child.material.color.setHex(0xaa0000);
+        }
+      }
+      if (child.userData.isBossAura) {
+        child.intensity = 1.5 + newPhase * 1.5;
+        child.distance = 8 + newPhase * 4;
+        child.color.setHex(newPhase === 3 ? 0xff0000 : 0xff6600);
+      }
+    });
+
+    const phaseTexts = {
+      2: '⚡ ФАЗА 2: Ярость!',
+      3: '💀 ФАЗА 3: БЕЗУМИЕ!'
+    };
+    showMessage(phaseTexts[newPhase], 2500);
+    updateHUD();
+  }
+}
+
+// ============ ГРАНАТА ИГРОКА ============
+function throwPlayerGrenade() {
+  if (!isGameActive || playerGrenades <= 0) return;
+  playerGrenades--;
+
+  const grenade = new THREE.Mesh(
+    new THREE.SphereGeometry(0.15, 8, 8),
+    new THREE.MeshStandardMaterial({ color: 0x2a5a2a, metalness: 0.8, roughness: 0.2 })
+  );
+  const startPos = camera.position.clone();
+  const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+  grenade.position.copy(startPos).add(forward.clone().multiplyScalar(0.5));
+  grenade.position.y -= 0.2;
+
+  const velocity = forward.clone().multiplyScalar(15);
+  velocity.y += 6;
+  grenade.userData = {
+    velocity,
+    life: 2.5,
+    damage: 80,
+    radius: 8,
+    isPlayer: true,
+    startTime: performance.now()
+  };
+  scene.add(grenade);
+  grenades.push(grenade);
+  playClickSound(300, 0.05);
+  updateHUD();
 }
 
 let gameStartTime = 0;
@@ -741,6 +1008,8 @@ function startGame(level = 1, survival = null) {
   wave = 1;
   hitsTaken = 0;
   medkits = 2;
+  playerGrenades = 3;
+  bossPhase = 1;
   enemies.forEach(e => scene.remove(e)); enemies = [];
   enemyBullets.forEach(b => scene.remove(b)); enemyBullets = [];
   grenades.forEach(g => scene.remove(g)); grenades = [];
@@ -765,6 +1034,7 @@ function startGame(level = 1, survival = null) {
   updateHUD();
   showMessage(survival ? `Режим выживания: ${survival.name}` : `Уровень ${level}: ${LEVELS[level].name}`, 2000);
   startHorrorAmbient();
+  startDynamicMusic();
   startWave();
   document.getElementById('mainMenu')?.classList.add('hidden');
   document.getElementById('hud')?.classList.remove('hidden');
@@ -793,11 +1063,17 @@ function startWave() {
     spawnEnemy(false);
     waveEnemiesRemaining--;
   }, spawnInterval);
+
+  // На 8 уровне — босс появляется на последней волне
+  if (lvl.boss && wave === lvl.waves && !currentBoss) {
+    setTimeout(() => { if (isGameActive && !currentBoss) spawnEnemy(true); }, 3000);
+  }
 }
 
 function checkWaveComplete() {
   if (enemies.length === 0 && waveEnemiesRemaining <= 0) {
     const lvl = LEVELS[currentLevel] || LEVELS[1];
+    if (lvl.boss && wave >= lvl.waves && currentBoss) return; // ждём убийства босса
     if (wave >= lvl.waves && !lvl.boss) completeLevel();
     else if (lvl.boss && wave >= lvl.waves && !currentBoss) completeLevel();
     else { wave++; startWave(); }
@@ -808,6 +1084,7 @@ function completeLevel() {
   isGameActive = false;
   if (waveSpawnTimer) clearInterval(waveSpawnTimer);
   stopHorrorAmbient();
+  stopDynamicMusic();
   const stars = health > getMaxHealth() * 0.75 ? 3 : health > getMaxHealth() * 0.4 ? 2 : 1;
   const coinsEarned = Math.floor(score / 10) + stars * 50;
   PROGRESS.coins += coinsEarned;
@@ -828,6 +1105,7 @@ function gameOver() {
   isGameActive = false;
   if (waveSpawnTimer) clearInterval(waveSpawnTimer);
   stopHorrorAmbient();
+  stopDynamicMusic();
   showMessage('Вы погибли...', 3000);
   setTimeout(() => {
     document.getElementById('hud')?.classList.add('hidden');
@@ -841,6 +1119,9 @@ function updateEnemies(delta) {
   const now = performance.now();
   const playerPos = camera.position;
 
+  // Проверка фаз босса
+  if (currentBoss) checkBossPhase();
+
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i];
     const ud = e.userData;
@@ -848,9 +1129,11 @@ function updateEnemies(delta) {
       createCorpse(e);
       if (ud.isBoss) {
         currentBoss = null;
-        addScore(1000);
-        addCoins(200);
+        addScore(5000);
+        addCoins(500);
         createLootCrate(e.position.clone(), 'sniper');
+        showMessage('💀 БОСС ПОВЕРЖЕН!', 3000);
+        stopDynamicMusic();
       } else {
         addScore(100);
         if (Math.random() < 0.3) createLootCrate(e.position.clone(), ud.weaponDrop);
@@ -866,7 +1149,13 @@ function updateEnemies(delta) {
     const dist = dir.length();
     if (dist > 0.1) {
       dir.normalize();
-      const speed = ud.speed * (survivalMode ? survivalMode.enemySpeed : 1);
+      let speedMult = ud.speed;
+      if (ud.isBoss) {
+        // Фаза 2+ — босс быстрее
+        if (ud.phase === 2) speedMult *= 1.3;
+        else if (ud.phase === 3) speedMult *= 1.6;
+      }
+      const speed = speedMult * (survivalMode ? survivalMode.enemySpeed : 1);
       const move = dir.clone().multiplyScalar(speed * delta);
       const newPos = e.position.clone().add(move);
       newPos.x = clamp(newPos.x, -46, 46);
@@ -877,7 +1166,9 @@ function updateEnemies(delta) {
 
     ud.walkPhase += delta * 6;
     e.children.forEach((child, idx) => {
-      if (idx === 4 || idx === 5) child.rotation.x = Math.sin(ud.walkPhase) * 0.4;
+      if (child.geometry && child.geometry.type === 'CylinderGeometry' && idx >= 4 && idx <= 7) {
+        child.rotation.x = Math.sin(ud.walkPhase) * 0.4;
+      }
     });
 
     if (now > ud.nextGroan) {
@@ -885,6 +1176,7 @@ function updateEnemies(delta) {
       ud.nextGroan = now + 3000 + Math.random() * 5000;
     }
 
+    // Ближний бой
     if (dist < (ud.isBoss ? 2.5 : 1.5)) {
       if (now - ud.lastShot > 1000) {
         ud.lastShot = now;
@@ -893,7 +1185,48 @@ function updateEnemies(delta) {
       }
     }
 
-    if ((ud.type === 'shooter' || ud.type === 'grenadier') && now > ud.nextShotTime) {
+    // ===== ЛОГИКА БОССА ПО ФАЗАМ =====
+    if (ud.isBoss) {
+      // ФАЗА 2+: призыв миньонов каждые 10 сек
+      if (ud.phase >= 2 && now > ud.nextSummonTime) {
+        ud.nextSummonTime = now + 10000;
+        for (let k = 0; k < 2 + ud.phase; k++) {
+          const offset = new THREE.Vector3((Math.random() - 0.5) * 6, 0, (Math.random() - 0.5) * 6);
+          const summonPos = e.position.clone().add(offset);
+          const minion = createZombie(false, 'melee');
+          minion.position.copy(summonPos);
+          minion.position.y = 0.9;
+          const baseHealth = LEVELS[currentLevel].enemyHealth;
+          minion.userData = {
+            type: 'melee', isBoss: false,
+            health: baseHealth, maxHealth: baseHealth,
+            speed: LEVELS[currentLevel].enemySpeed,
+            radius: 0.5, walkPhase: 0,
+            nextShotTime: now + 99999,
+            weaponDrop: 'pistol',
+            phase: 1, phaseChanged: false
+          };
+          scene.add(minion);
+          enemies.push(minion);
+        }
+        // Эффект призыва
+        const flash = new THREE.PointLight(0xff4400, 3, 10);
+        flash.position.copy(e.position);
+        scene.add(flash);
+        setTimeout(() => scene.remove(flash), 200);
+      }
+
+      // ФАЗА 3: стрельба + гранаты
+      if (ud.phase >= 3 && now > ud.nextShotTime) {
+        ud.nextShotTime = now + 1000 + Math.random() * 1500;
+        if (dist < 30 && dist > 3) {
+          if (Math.random() < 0.6) enemyShoot(e, playerPos);
+          else throwGrenade(e, playerPos);
+        }
+      }
+    }
+    // ===== ОБЫЧНЫЕ ВРАГИ =====
+    else if ((ud.type === 'shooter' || ud.type === 'grenadier') && now > ud.nextShotTime) {
       if (dist < 30 && dist > 3) {
         ud.nextShotTime = now + 1500 + Math.random() * 2000;
         if (ud.type === 'shooter') enemyShoot(e, playerPos);
@@ -905,9 +1238,9 @@ function updateEnemies(delta) {
 
 function enemyShoot(e, target) {
   const bullet = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 6), new THREE.MeshBasicMaterial({ color: 0xff3300 }));
-  bullet.position.copy(e.position).add(new THREE.Vector3(0, 1.2, 0));
+  bullet.position.copy(e.position).add(new THREE.Vector3(0, e.userData.isBoss ? 2 : 1.2, 0));
   const dir = new THREE.Vector3().subVectors(target, bullet.position).normalize();
-  bullet.userData = { velocity: dir.multiplyScalar(25), life: 3, damage: 10 };
+  bullet.userData = { velocity: dir.multiplyScalar(25), life: 3, damage: e.userData.isBoss ? 15 : 10 };
   scene.add(bullet);
   enemyBullets.push(bullet);
   playShootSoundEnhanced();
@@ -918,11 +1251,11 @@ function throwGrenade(e, target) {
     new THREE.SphereGeometry(0.15, 8, 8),
     new THREE.MeshStandardMaterial({ color: 0x2a5a2a, metalness: 0.8, roughness: 0.2 })
   );
-  grenade.position.copy(e.position).add(new THREE.Vector3(0, 1.2, 0));
+  grenade.position.copy(e.position).add(new THREE.Vector3(0, e.userData.isBoss ? 2 : 1.2, 0));
   const dir = new THREE.Vector3().subVectors(target, grenade.position).normalize();
   grenade.userData = {
     velocity: dir.multiplyScalar(12).add(new THREE.Vector3(0, 5, 0)),
-    life: 2.5, damage: 40, radius: 6
+    life: 2.5, damage: 40, radius: 6, isPlayer: false
   };
   scene.add(grenade);
   grenades.push(grenade);
@@ -948,24 +1281,38 @@ function updateBullets(delta) {
     g.position.add(g.userData.velocity.clone().multiplyScalar(delta));
     if (g.position.y < 0.2) { g.userData.velocity.y *= -0.5; g.position.y = 0.2; }
     if (g.userData.life <= 0) {
-      explodeGrenade(g.position, g.userData.damage, g.userData.radius);
+      explodeGrenade(g.position, g.userData.damage, g.userData.radius, g.userData.isPlayer);
       scene.remove(g); grenades.splice(i, 1);
     }
   }
 }
 
-function explodeGrenade(pos, damage, radius) {
+function explodeGrenade(pos, damage, radius, isPlayer) {
   playExplosionSound(pos);
   const dist = pos.distanceTo(camera.position);
-  if (dist < radius) takeDamage(damage * (1 - dist / radius));
+  // Урон игроку — только от вражеских гранат
+  if (!isPlayer && dist < radius) takeDamage(damage * (1 - dist / radius));
+
+  // Урон зомби — от любых гранат
   enemies.forEach(e => {
     const d = pos.distanceTo(e.position);
     if (d < radius) e.userData.health -= damage * (1 - d / radius);
   });
+
   const flash = new THREE.PointLight(0xff6600, 3, radius * 2);
   flash.position.copy(pos);
   scene.add(flash);
   setTimeout(() => scene.remove(flash), 100);
+
+  // Частицы взрыва
+  for (let i = 0; i < 15; i++) {
+    const vel = new THREE.Vector3(
+      (Math.random() - 0.5) * 12,
+      Math.random() * 6 + 2,
+      (Math.random() - 0.5) * 12
+    );
+    spawnParticle(pos, vel, i % 2 === 0 ? 0xff6600 : 0xffaa00, 0.08 + Math.random() * 0.06, 0.6 + Math.random() * 0.4, true);
+  }
 }
 
 // ============ УРОН И ЗДОРОВЬЕ ============
@@ -1004,7 +1351,7 @@ function createLootCrate(pos, weaponKey) {
   );
   crate.position.copy(pos);
   crate.position.y = 0.3;
-  crate.userData = { weapon: weaponKey, ammo: WEAPONS[weaponKey]?.maxAmmo || 15 };
+  crate.userData = { weapon: weaponKey, ammo: WEAPONS[weaponKey]?.maxAmmo || 15, type: 'weapon' };
   scene.add(crate);
   lootCrates.push(crate);
 }
@@ -1168,6 +1515,7 @@ function setupControls() {
     if (k === 'r') reload();
     if (k === 'e') pickupLoot();
     if (k === 'q') useMedkit();
+    if (k === 'g') throwPlayerGrenade();
     if (k === '1') switchWeapon('pistol');
     if (k === '2') switchWeapon('rifle');
     if (k === '3') switchWeapon('shotgun');
@@ -1175,7 +1523,7 @@ function setupControls() {
     if (k === '5') switchWeapon('dualPistols');
     if (k === '6') switchWeapon('flamethrower');
     if (k === 'f') { if (flashlight) flashlight.visible = !flashlight.visible; }
-    if (k === 'escape') { if (isGameActive) { isGameActive = false; stopHorrorAmbient(); showMainMenu(); } }
+    if (k === 'escape') { if (isGameActive) { isGameActive = false; stopHorrorAmbient(); stopDynamicMusic(); showMainMenu(); } }
     if (k === ' ') { e.preventDefault(); jump(); }
   });
   document.addEventListener('keyup', (e) => {
@@ -1200,10 +1548,12 @@ function setupControls() {
       if (!document.pointerLockElement) renderer.domElement.requestPointerLock();
       shoot();
     }
+    if (e.button === 2) { e.preventDefault(); throwPlayerGrenade(); }
   });
   document.addEventListener('mouseup', (e) => {
     if (e.button === 0) isMouseDown = false;
   });
+  document.addEventListener('contextmenu', (e) => { if (isGameActive) e.preventDefault(); });
   if (isMobile) setupMobileControls();
 }
 
@@ -1343,6 +1693,7 @@ function animate() {
     updateBullets(delta);
     updateLoot(delta);
     updateParticles(delta);
+    updateMusicIntensity();
   }
   if (isMouseDown && isGameActive) {
     const w = WEAPONS[currentWeapon];
@@ -1365,6 +1716,8 @@ function setupUI() {
       <div id="scoreDisplay">Очки: <span id="scoreValue">0</span></div>
       <div id="waveDisplay">Волна: <span id="waveValue">1</span></div>
       <div id="medkitDisplay">Аптечки: <span id="medkitCount">2</span></div>
+      <div id="grenadeDisplay">💣 <span id="grenadeCount">3</span></div>
+      <div id="bossBar" class="hidden"><div id="bossFill"></div><div id="bossLabel">БОСС</div></div>
       <div id="messageBox"></div>
       <div id="hitmarker">✕</div>
     `;
@@ -1384,7 +1737,6 @@ function setupUI() {
       <button id="resetBtn">Сбросить прогресс</button>
     `;
     document.body.appendChild(menu);
-
     document.getElementById('survivalBtn').onclick = () => {
       const mode = prompt('Выберите режим: easy, normal, hard, nightmare', 'normal');
       if (SURVIVAL_MODES[mode]) startGame(1, SURVIVAL_MODES[mode]);
@@ -1428,14 +1780,19 @@ function setupUI() {
     #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; font-family: monospace; color: #fff; }
     #healthBar { position: absolute; bottom: 20px; left: 20px; width: 200px; height: 20px; background: #333; border: 2px solid #fff; }
     #healthFill { height: 100%; width: 100%; background: #c00; transition: width 0.2s; }
-    #ammoDisplay, #scoreDisplay, #waveDisplay, #medkitDisplay { position: absolute; bottom: 50px; right: 20px; background: rgba(0,0,0,0.5); padding: 5px 10px; }
+    #ammoDisplay, #scoreDisplay, #waveDisplay, #medkitDisplay, #grenadeDisplay { position: absolute; bottom: 50px; right: 20px; background: rgba(0,0,0,0.5); padding: 5px 10px; }
     #scoreDisplay { top: 20px; left: 20px; bottom: auto; right: auto; }
     #waveDisplay { top: 20px; left: 50%; transform: translateX(-50%); bottom: auto; right: auto; }
     #medkitDisplay { bottom: 80px; right: 20px; }
+    #grenadeDisplay { bottom: 110px; right: 20px; color: #8f8; }
+    #bossBar { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); width: 60%; max-width: 600px; height: 30px; background: #1a0000; border: 3px solid #800; }
+    #bossFill { height: 100%; width: 100%; background: linear-gradient(90deg, #f00, #800); transition: width 0.2s; }
+    #bossLabel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; font-weight: bold; text-shadow: 2px 2px 4px #000; letter-spacing: 3px; }
+    .hidden { display: none !important; }
     #messageBox { position: absolute; top: 30%; left: 50%; transform: translateX(-50%); font-size: 24px; text-align: center; text-shadow: 2px 2px 4px #000; }
     #hitmarker { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-size: 28px; font-weight: bold; opacity: 0; pointer-events: none; z-index: 15; transition: opacity 0.1s, transform 0.1s, font-size 0.1s, color 0.1s; text-shadow: 0 0 6px rgba(0,0,0,0.9); font-family: monospace; }
     #mainMenu { position: fixed; inset: 0; background: rgba(0,0,0,0.9); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; font-family: monospace; }
-    #mainMenu.hidden, #hud.hidden, #shopModal.hidden { display: none; }
+    #mainMenu.hidden { display: none; }
     #levelGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 20px; }
     .levelBtn { padding: 10px; background: #333; border: 2px solid #666; color: #fff; cursor: pointer; }
     .levelBtn.unlocked { border-color: #0f0; }
@@ -1444,8 +1801,6 @@ function setupUI() {
     #coinsDisplay { margin: 10px; font-size: 20px; }
     button { padding: 10px 20px; margin: 5px; background: #444; color: #fff; border: 2px solid #888; cursor: pointer; font-size: 16px; }
     button:hover { background: #666; }
-
-    /* Магазин */
     #shopModal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: flex; align-items: center; justify-content: center; font-family: monospace; color: #fff; }
     .shopContent { background: #1a1a1a; border: 2px solid #555; width: 90%; max-width: 800px; max-height: 85vh; display: flex; flex-direction: column; border-radius: 8px; overflow: hidden; }
     .shopHeader { display: flex; align-items: center; justify-content: space-between; padding: 15px 20px; background: #222; border-bottom: 2px solid #555; }
@@ -1480,11 +1835,13 @@ function setupUI() {
       <div id="joystickZone" style="position:fixed;bottom:20px;left:20px;width:120px;height:120px;background:rgba(255,255,255,0.1);border-radius:50%;z-index:20;"></div>
       <div id="lookZone" style="position:fixed;top:0;right:0;width:50%;height:100%;z-index:19;"></div>
       <button id="shootBtn" style="position:fixed;bottom:30px;right:30px;width:80px;height:80px;border-radius:50%;z-index:21;">🔫</button>
+      <button id="grenadeBtn" style="position:fixed;bottom:120px;right:120px;width:60px;height:60px;border-radius:50%;z-index:21;">💣</button>
       <button id="reloadBtn" style="position:fixed;bottom:120px;right:30px;width:60px;height:60px;border-radius:50%;z-index:21;">🔄</button>
     `;
     document.body.appendChild(mobileUI);
     document.getElementById('shootBtn').addEventListener('touchstart', (e) => { e.preventDefault(); shoot(); });
     document.getElementById('reloadBtn').addEventListener('touchstart', (e) => { e.preventDefault(); reload(); });
+    document.getElementById('grenadeBtn').addEventListener('touchstart', (e) => { e.preventDefault(); throwPlayerGrenade(); });
   }
 }
 
@@ -1499,6 +1856,21 @@ function updateHUD() {
   if (waveValue) waveValue.textContent = wave;
   const medkitCount = document.getElementById('medkitCount');
   if (medkitCount) medkitCount.textContent = medkits;
+  const grenadeCount = document.getElementById('grenadeCount');
+  if (grenadeCount) grenadeCount.textContent = playerGrenades;
+
+  // Полоса босса
+  const bossBar = document.getElementById('bossBar');
+  const bossFill = document.getElementById('bossFill');
+  const bossLabel = document.getElementById('bossLabel');
+  if (bossBar && currentBoss && currentBoss.userData) {
+    bossBar.classList.remove('hidden');
+    const ratio = currentBoss.userData.health / currentBoss.userData.maxHealth;
+    bossFill.style.width = (ratio * 100) + '%';
+    bossLabel.textContent = `БОСС — ФАЗА ${bossPhase}`;
+  } else if (bossBar) {
+    bossBar.classList.add('hidden');
+  }
 }
 
 function showMessage(text, duration = 2000) {
@@ -1535,6 +1907,7 @@ function updateCoinsDisplay() {
 function showMainMenu() {
   document.getElementById('mainMenu')?.classList.remove('hidden');
   document.getElementById('hud')?.classList.add('hidden');
+  document.getElementById('bossBar')?.classList.add('hidden');
   renderLevelGrid();
   updateCoinsDisplay();
 }
@@ -1553,10 +1926,7 @@ function showShop() {
   updateCoinsDisplay();
   renderShop('weapons');
 }
-
-function hideShop() {
-  document.getElementById('shopModal')?.classList.add('hidden');
-}
+function hideShop() { document.getElementById('shopModal')?.classList.add('hidden'); }
 
 function renderShop(tab = 'weapons') {
   const body = document.getElementById('shopBody');
@@ -1570,15 +1940,13 @@ function renderShop(tab = 'weapons') {
       const owned = PROGRESS.ownedWeapons.includes(key);
       const equipped = currentWeapon === key;
       const canAfford = PROGRESS.coins >= (w.cost || 0);
-      let btnText, btnClass = '', disabled = false;
-      if (equipped) { btnText = '✅ Выбрано'; btnClass = 'equipped'; disabled = true; }
+      let btnText, disabled = false;
+      if (equipped) { btnText = '✅ Выбрано'; disabled = true; }
       else if (owned) { btnText = 'Выбрать'; }
       else if (canAfford) { btnText = 'Купить'; }
       else { btnText = 'Не хватает монет'; disabled = true; }
-
       const stats = `Урон: ${w.damage} | Магазин: ${w.maxAmmo}<br>${w.auto ? 'Авто' : 'Одиночный'} | Перезарядка: ${(w.reload/1000).toFixed(1)}с`;
       const costText = owned ? (equipped ? 'В руках' : 'Куплено') : `💰 ${w.cost}`;
-
       html += `
         <div class="shopItem ${owned ? 'owned' : ''} ${equipped ? 'equipped' : ''}">
           <div class="itemIcon">${w.icon || '🔫'}</div>
@@ -1586,14 +1954,11 @@ function renderShop(tab = 'weapons') {
           <div class="itemDesc">${stats}</div>
           <div class="itemCost">${costText}</div>
           <button ${disabled ? 'disabled' : ''} onclick="handleWeapon('${key}')">${btnText}</button>
-        </div>
-      `;
+        </div>`;
     }
     html += '</div>';
     body.innerHTML = html;
-  }
-
-  else if (tab === 'skins') {
+  } else if (tab === 'skins') {
     let html = '<div class="shopGrid">';
     for (const key in SKINS) {
       const sk = SKINS[key];
@@ -1613,14 +1978,11 @@ function renderShop(tab = 'weapons') {
           <div class="itemDesc">Изменяет цвет зомби-игрока</div>
           <div class="itemCost">${costText}</div>
           <button ${disabled ? 'disabled' : ''} onclick="handleSkin('${key}')">${btnText}</button>
-        </div>
-      `;
+        </div>`;
     }
     html += '</div>';
     body.innerHTML = html;
-  }
-
-  else if (tab === 'upgrades') {
+  } else if (tab === 'upgrades') {
     let html = '<div class="shopGrid">';
     for (const key in UPGRADES) {
       const upg = UPGRADES[key];
@@ -1632,15 +1994,11 @@ function renderShop(tab = 'weapons') {
       if (maxed) { btnText = '⭐ МАКС'; disabled = true; }
       else if (canAfford) { btnText = `Улучшить (ур. ${level+1})`; }
       else { btnText = 'Не хватает монет'; disabled = true; }
-
       let pips = '';
-      for (let i = 0; i < upg.maxLevel; i++) {
-        pips += `<div class="pip ${i < level ? 'filled' : ''}"></div>`;
-      }
+      for (let i = 0; i < upg.maxLevel; i++) pips += `<div class="pip ${i < level ? 'filled' : ''}"></div>`;
       const effectText = key === 'damage' ? `+${level*10}% урона`
                        : key === 'reload' ? `−${level*10}% перезарядки`
                        : `+${level*20} HP`;
-
       html += `
         <div class="shopItem ${maxed ? 'owned' : ''}">
           <div class="itemIcon">${upg.icon}</div>
@@ -1649,8 +2007,7 @@ function renderShop(tab = 'weapons') {
           <div class="upgradeBar">${pips}</div>
           <div class="itemCost">${maxed ? '⭐ Максимум' : '💰 ' + cost}</div>
           <button ${disabled ? 'disabled' : ''} onclick="buyUpgrade('${key}')">${btnText}</button>
-        </div>
-      `;
+        </div>`;
     }
     html += '</div>';
     body.innerHTML = html;
@@ -1658,44 +2015,31 @@ function renderShop(tab = 'weapons') {
 }
 
 function handleWeapon(key) {
-  if (PROGRESS.ownedWeapons.includes(key)) {
-    switchWeapon(key);
-    playClickSound(500, 0.05);
-  } else {
+  if (PROGRESS.ownedWeapons.includes(key)) { switchWeapon(key); playClickSound(500, 0.05); }
+  else {
     const w = WEAPONS[key];
     if (PROGRESS.coins >= w.cost) {
       PROGRESS.coins -= w.cost;
       PROGRESS.ownedWeapons.push(key);
-      saveProgress();
-      playBuySound();
-      switchWeapon(key);
-    } else {
-      playErrorSound();
-    }
+      saveProgress(); playBuySound(); switchWeapon(key);
+    } else playErrorSound();
   }
-  updateCoinsDisplay();
-  renderShop('weapons');
+  updateCoinsDisplay(); renderShop('weapons');
 }
 
 function handleSkin(key) {
   if (PROGRESS.ownedSkins.includes(key)) {
-    PROGRESS.currentSkin = key;
-    saveProgress();
-    playClickSound(500, 0.05);
+    PROGRESS.currentSkin = key; saveProgress(); playClickSound(500, 0.05);
   } else {
     const sk = SKINS[key];
     if (PROGRESS.coins >= sk.cost) {
       PROGRESS.coins -= sk.cost;
       PROGRESS.ownedSkins.push(key);
       PROGRESS.currentSkin = key;
-      saveProgress();
-      playBuySound();
-    } else {
-      playErrorSound();
-    }
+      saveProgress(); playBuySound();
+    } else playErrorSound();
   }
-  updateCoinsDisplay();
-  renderShop('skins');
+  updateCoinsDisplay(); renderShop('skins');
 }
 
 function buyUpgrade(key) {
@@ -1707,21 +2051,12 @@ function buyUpgrade(key) {
   if (PROGRESS.coins >= cost) {
     PROGRESS.coins -= cost;
     PROGRESS.upgrades[key] = level + 1;
-    saveProgress();
-    playBuySound();
-    updateCoinsDisplay();
-    renderShop('upgrades');
-    // Если купили HP — обновим текущее здоровье в игре
-    if (key === 'health' && isGameActive) {
-      health = Math.min(health + 20, getMaxHealth());
-      updateHUD();
-    }
-  } else {
-    playErrorSound();
-  }
+    saveProgress(); playBuySound();
+    updateCoinsDisplay(); renderShop('upgrades');
+    if (key === 'health' && isGameActive) { health = Math.min(health + 20, getMaxHealth()); updateHUD(); }
+  } else playErrorSound();
 }
 
-// Экспорт функций для onclick в HTML
 window.hideShop = hideShop;
 window.handleWeapon = handleWeapon;
 window.handleSkin = handleSkin;
@@ -1735,6 +2070,4 @@ window.addEventListener('resize', () => {
   if (composer) composer.setSize(innerWidth, innerHeight);
 });
 
-window.addEventListener('load', () => {
-  init();
-});
+window.addEventListener('load', () => { init(); });

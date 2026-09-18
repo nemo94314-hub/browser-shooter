@@ -82,6 +82,16 @@
     <ellipse cx="40" cy="28" rx="6" ry="8" fill="#0a0a0a"/>
     <polygon points="32,38 29,46 35,46" fill="#0a0a0a"/>
   </symbol>
+  <!-- НОВАЯ ИКОНКА: ГРАНАТА -->
+  <symbol id="icon-grenade" viewBox="0 0 64 64">
+    <ellipse cx="32" cy="38" rx="16" ry="20" fill="#2a5a2a" stroke="#000" stroke-width="2"/>
+    <rect x="28" y="12" width="8" height="10" fill="#666" stroke="#000" stroke-width="1.5"/>
+    <path d="M32 12 Q42 4 50 10" stroke="#cc8800" stroke-width="2.5" fill="none"/>
+    <circle cx="50" cy="10" r="3" fill="#cc8800"/>
+    <line x1="20" y1="32" x2="44" y2="32" stroke="#1a3a1a" stroke-width="1.5"/>
+    <line x1="20" y1="44" x2="44" y2="44" stroke="#1a3a1a" stroke-width="1.5"/>
+    <circle cx="28" cy="28" r="1.5" fill="#7aff7a"/>
+  </symbol>
 </svg>
 
 <!-- ГЛАВНОЕ МЕНЮ -->
@@ -240,6 +250,8 @@
   <div id="health">100</div>
   <div id="ammo"><svg class="ico-hud"><use href="#icon-rifle"/></svg> 30/30</div>
   <div id="medkits"><svg class="ico-hud"><use href="#icon-medkit"/></svg> x2</div>
+  <!-- НОВОЕ: СЧЁТЧИК ГРАНАТ -->
+  <div id="grenades"><svg class="ico-hud"><use href="#icon-grenade"/></svg> x3</div>
   <div id="crosshair">+</div>
   <div id="interactPrompt">[F] Подобрать</div>
   <div id="bossBar" style="display:none;">
@@ -259,6 +271,8 @@
     <button class="mob-btn reload" id="btnReload"><svg class="ico-btn"><use href="#icon-reload"/></svg></button>
     <button class="mob-btn jump" id="btnJump"><svg class="ico-btn"><use href="#icon-jump"/></svg></button>
     <button class="mob-btn pickup" id="btnPickup"><svg class="ico-btn"><use href="#icon-pickup"/></svg></button>
+    <!-- НОВОЕ: КНОПКА ГРАНАТЫ -->
+    <button class="mob-btn grenade" id="btnGrenade"><svg class="ico-btn"><use href="#icon-grenade"/></svg></button>
     <button class="mob-btn shoot" id="btnShoot"><svg class="ico-btn"><use href="#icon-shoot"/></svg></button>
   </div>
 </div>
@@ -383,6 +397,38 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error:', err));
   });
 }
+
+// ============ ПОДКЛЮЧЕНИЕ КНОПКИ ГРАНАТЫ ============
+// Кнопка появляется в мобильном управлении. Также можно нажать ПКМ или G на клавиатуре.
+window.addEventListener('load', () => {
+  const btn = document.getElementById('btnGrenade');
+  if (btn) {
+    // Тач
+    btn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (typeof throwPlayerGrenade === 'function') throwPlayerGrenade();
+      btn.style.transform = 'scale(0.9)';
+      setTimeout(() => { btn.style.transform = ''; }, 100);
+    }, { passive: false });
+    // Клик (для десктопной отладки)
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (typeof throwPlayerGrenade === 'function') throwPlayerGrenade();
+      btn.style.transform = 'scale(0.9)';
+      setTimeout(() => { btn.style.transform = ''; }, 100);
+    });
+  }
+
+  // Обновление счётчика гранат в HUD
+  const updateGrenadeHUD = () => {
+    const el = document.getElementById('grenades');
+    if (!el) return;
+    const count = (typeof playerGrenades !== 'undefined') ? playerGrenades : 3;
+    el.innerHTML = '<svg class="ico-hud"><use href="#icon-grenade"/></svg> x' + count;
+  };
+  setInterval(updateGrenadeHUD, 250);
+  updateGrenadeHUD();
+});
 </script>
 </body>
 </html>

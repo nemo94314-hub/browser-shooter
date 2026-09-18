@@ -14,11 +14,9 @@
 <div id="menu" class="screen">
   <div class="menu-box">
     <img src="skull.png" alt="ZOMBIESHOOT" class="skull-img">
-
     <h1 class="game-title">ZOMBIE<span class="red">SHOOT</span></h1>
     <p class="tagline">ВЫЖИВИ В ЗОНЕ ЗАРАЖЕНИЯ</p>
-    <div class="version">v6.3 · ALPHA</div>
-
+    <div class="version">v8.0 · ALPHA</div>
     <button id="startBtn" class="btn-primary">▶ ИГРАТЬ</button>
     <button id="settingsBtn" class="btn-secondary">⚙ НАСТРОЙКИ</button>
   </div>
@@ -38,6 +36,8 @@
         <div><kbd>SPACE</kbd><span>Прыжок</span></div>
         <div><kbd>R</kbd><span>Перезарядка</span></div>
         <div><kbd>1 2 3</kbd><span>Оружие</span></div>
+        <div><kbd>4</kbd><span>Аптечка</span></div>
+        <div><kbd>F</kbd><span>Подобрать лут</span></div>
       </div>
     </div>
 
@@ -47,7 +47,7 @@
         <input type="range" id="sensSlider" min="1" max="20" value="5">
       </label>
       <label>Громкость
-        <input type="range" id="volSlider" min="0" max="100" value="50">
+        <input type="range" id="volSlider" min="0" max="100" value="40">
       </label>
       <label>Качество
         <select id="qualitySelect">
@@ -58,11 +58,18 @@
       </label>
     </div>
 
-    <!-- БЛОК ПОДДЕРЖКИ -->
+    <div class="settings-block">
+      <h3>ПРОЧЕЕ</h3>
+      <label class="toggle-label">
+        <input type="checkbox" id="debugToggle">
+        <span>Показывать отладочную панель</span>
+      </label>
+    </div>
+
     <div class="settings-block support-block">
       <h3>ПОДДЕРЖКА</h3>
       <p class="support-text">Нашли баг, есть идея или вопрос?</p>
-      <a href="mailto:nemo94314@gmail.com?subject=ZOMBIESHOOT%20—%20Обратная%20связь&body=Опишите%20проблему%20или%20идею:" class="btn-support">
+      <a href="mailto:nemo94314@gmail.com?subject=ZOMBIESHOOT%20—%20Обратная%20связь" class="btn-support">
         ✉ НАПИСАТЬ НА ПОЧТУ
       </a>
       <p class="support-email">nemo94314@gmail.com</p>
@@ -77,8 +84,11 @@
   <div id="score">Счёт: 0 | Волна: 1</div>
   <div id="health">❤️ 100</div>
   <div id="ammo">🔫 30 / 30</div>
+  <div id="medkits">🩹 x2</div>
   <div id="crosshair">+</div>
+  <div id="interactPrompt">[F] Подобрать</div>
   <div id="damageVignette"></div>
+  <div id="hitMarker"></div>
 </div>
 
 <!-- ЭКРАН СМЕРТИ -->
@@ -95,31 +105,22 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="game.js"></script>
 <script>
-// ========== ФОН ДЛЯ МЕНЮ ==========
+// ========== ФОН МЕНЮ ==========
 const bg = document.getElementById('bgCanvas');
 const bctx = bg.getContext('2d');
-
 function resizeBg(){ bg.width = innerWidth; bg.height = innerHeight; }
-resizeBg();
-addEventListener('resize', resizeBg);
+resizeBg(); addEventListener('resize', resizeBg);
 
 const pts = Array.from({length: 120}, () => ({
-  x: Math.random() * bg.width,
-  y: Math.random() * bg.height,
-  vx: (Math.random() - 0.5) * 0.4,
-  vy: (Math.random() - 0.5) * 0.4,
-  r: Math.random() * 2 + 0.5,
-  a: Math.random() * 0.5 + 0.15
+  x: Math.random() * bg.width, y: Math.random() * bg.height,
+  vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
+  r: Math.random() * 2 + 0.5, a: Math.random() * 0.5 + 0.15
 }));
 
 function drawBG(){
-  bctx.fillStyle = '#000000';
+  bctx.fillStyle = '#000';
   bctx.fillRect(0, 0, bg.width, bg.height);
-
-  const g = bctx.createRadialGradient(
-    bg.width/2, bg.height/2, 100,
-    bg.width/2, bg.height/2, Math.max(bg.width, bg.height)/1.5
-  );
+  const g = bctx.createRadialGradient(bg.width/2, bg.height/2, 100, bg.width/2, bg.height/2, Math.max(bg.width, bg.height)/1.5);
   g.addColorStop(0, 'rgba(60,0,0,0.15)');
   g.addColorStop(1, 'rgba(0,0,0,0.9)');
   bctx.fillStyle = g;
@@ -129,7 +130,6 @@ function drawBG(){
     p.x += p.vx; p.y += p.vy;
     if (p.x < 0 || p.x > bg.width) p.vx *= -1;
     if (p.y < 0 || p.y > bg.height) p.vy *= -1;
-
     bctx.beginPath();
     bctx.arc(p.x, p.y, p.r, 0, 6.28);
     bctx.fillStyle = `rgba(220,40,40,${p.a})`;
@@ -138,15 +138,15 @@ function drawBG(){
     bctx.fill();
     bctx.shadowBlur = 0;
   });
-
   requestAnimationFrame(drawBG);
 }
 drawBG();
 
-// ========== ФОНОВАЯ МУЗЫКА ==========
+// ========== ТИХАЯ ФОНОВАЯ МУЗЫКА ==========
 let musicCtx = null;
 let musicNodes = [];
 let musicPlaying = false;
+let musicVolume = 0.15;
 
 function startMusic(){
   if (musicPlaying) return;
@@ -161,53 +161,54 @@ function playAmbientMusic(){
   if (!musicCtx || musicCtx.state === 'closed') return;
   const now = musicCtx.currentTime;
 
-  const bass = musicCtx.createOscillator();
-  const bassGain = musicCtx.createGain();
-  bass.type = 'sawtooth';
-  bass.frequency.setValueAtTime(55, now);
-  bassGain.gain.setValueAtTime(0.08, now);
-  bass.connect(bassGain);
-  bassGain.connect(musicCtx.destination);
-  bass.start(now);
-  bass.stop(now + 4);
-  musicNodes.push(bass);
+  // Мягкий пад (аккорд из 3 нот)
+  const notes = [110, 164.81, 220]; // A2, E3, A3
+  notes.forEach((freq, i) => {
+    const osc = musicCtx.createOscillator();
+    const gain = musicCtx.createGain();
+    const filter = musicCtx.createBiquadFilter();
 
-  const pad = musicCtx.createOscillator();
-  const padGain = musicCtx.createGain();
-  const filter = musicCtx.createBiquadFilter();
-  filter.type = 'lowpass';
-  filter.frequency.setValueAtTime(400, now);
-  pad.type = 'sine';
-  pad.frequency.setValueAtTime(110, now);
-  padGain.gain.setValueAtTime(0, now);
-  padGain.gain.linearRampToValueAtTime(0.06, now + 0.5);
-  padGain.gain.linearRampToValueAtTime(0, now + 3.8);
-  pad.connect(filter);
-  filter.connect(padGain);
-  padGain.connect(musicCtx.destination);
-  pad.start(now);
-  pad.stop(now + 4);
-  musicNodes.push(pad);
+    osc.type = 'sine'; // мягкий, без шума
+    osc.frequency.setValueAtTime(freq, now);
 
-  if (Math.random() > 0.5) {
-    const high = musicCtx.createOscillator();
-    const highGain = musicCtx.createGain();
-    high.type = 'triangle';
-    high.frequency.setValueAtTime(880, now + 1);
-    high.frequency.exponentialRampToValueAtTime(660, now + 2.5);
-    highGain.gain.setValueAtTime(0, now + 1);
-    highGain.gain.linearRampToValueAtTime(0.02, now + 1.3);
-    highGain.gain.linearRampToValueAtTime(0, now + 2.8);
-    high.connect(highGain);
-    highGain.connect(musicCtx.destination);
-    high.start(now + 1);
-    high.stop(now + 3);
-    musicNodes.push(high);
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(600, now);
+    filter.Q.setValueAtTime(0.5, now);
+
+    // Плавное появление и затухание
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.04 * musicVolume * 10, now + 1.5);
+    gain.gain.linearRampToValueAtTime(0, now + 5.5);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(musicCtx.destination);
+
+    osc.start(now + i * 0.15);
+    osc.stop(now + 6);
+    musicNodes.push(osc);
+  });
+
+  // Редкий мягкий колокольчик
+  if (Math.random() > 0.6) {
+    const bell = musicCtx.createOscillator();
+    const bellGain = musicCtx.createGain();
+    bell.type = 'sine';
+    const bellFreq = [440, 523.25, 659.25][Math.floor(Math.random() * 3)];
+    bell.frequency.setValueAtTime(bellFreq, now + 2);
+    bellGain.gain.setValueAtTime(0, now + 2);
+    bellGain.gain.linearRampToValueAtTime(0.02 * musicVolume * 10, now + 2.3);
+    bellGain.gain.exponentialRampToValueAtTime(0.001, now + 4.5);
+    bell.connect(bellGain);
+    bellGain.connect(musicCtx.destination);
+    bell.start(now + 2);
+    bell.stop(now + 5);
+    musicNodes.push(bell);
   }
 
   setTimeout(() => {
     if (musicPlaying) playAmbientMusic();
-  }, 4000);
+  }, 6000);
 }
 
 function stopMusic(){
@@ -220,12 +221,14 @@ function stopMusic(){
   }
 }
 
+// Запуск при первом клике
 document.addEventListener('click', () => {
   if (!musicPlaying) startMusic();
 }, { once: true });
 
 window.stopBackgroundMusic = stopMusic;
 window.startBackgroundMusic = startMusic;
+window.setMusicVolume = (v) => { musicVolume = v; };
 </script>
 </body>
 </html>

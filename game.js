@@ -1,6 +1,5 @@
-// ============ ZOMBIESHOOT v10.0 — LEVELS ============
+// ============ ZOMBIESHOOT v11.0 — 8 LEVELS ============
 
-// ============ ПРОГРЕСС (сохранение) ============
 const DEFAULT_PROGRESS = {
   coins: 0,
   levels: {
@@ -8,7 +7,10 @@ const DEFAULT_PROGRESS = {
     2: { unlocked: false, completed: false, stars: 0 },
     3: { unlocked: false, completed: false, stars: 0 },
     4: { unlocked: false, completed: false, stars: 0 },
-    5: { unlocked: false, completed: false, stars: 0 }
+    5: { unlocked: false, completed: false, stars: 0 },
+    6: { unlocked: false, completed: false, stars: 0 },
+    7: { unlocked: false, completed: false, stars: 0 },
+    8: { unlocked: false, completed: false, stars: 0 }
   },
   ownedSkins: ['default'],
   ownedWeapons: ['pistol', 'rifle', 'shotgun'],
@@ -18,66 +20,53 @@ let PROGRESS = loadProgress();
 
 function loadProgress() {
   try {
-    const s = localStorage.getItem('zombieshoot_progress_v10');
-    if (s) {
-      const p = JSON.parse(s);
-      return Object.assign(JSON.parse(JSON.stringify(DEFAULT_PROGRESS)), p);
-    }
+    const s = localStorage.getItem('zombieshoot_progress_v11');
+    if (s) return Object.assign(JSON.parse(JSON.stringify(DEFAULT_PROGRESS)), JSON.parse(s));
   } catch(e) {}
   return JSON.parse(JSON.stringify(DEFAULT_PROGRESS));
 }
-function saveProgress() {
-  try { localStorage.setItem('zombieshoot_progress_v10', JSON.stringify(PROGRESS)); } catch(e) {}
-}
-function resetProgress() {
-  PROGRESS = JSON.parse(JSON.stringify(DEFAULT_PROGRESS));
-  saveProgress();
-  updateCoinsDisplay();
-  renderLevelGrid();
-}
+function saveProgress() { try { localStorage.setItem('zombieshoot_progress_v11', JSON.stringify(PROGRESS)); } catch(e) {} }
+function resetProgress() { PROGRESS = JSON.parse(JSON.stringify(DEFAULT_PROGRESS)); saveProgress(); updateCoinsDisplay(); renderLevelGrid(); }
 
-// ============ УРОВНИ ============
+// ============ 8 УРОВНЕЙ ============
 const LEVELS = {
-  1: { name:'Лагерь',       waves:1, boss:false, maxEnemies:5,  enemySpeed:1.2, enemyHealth:30, enemyDamage:0.5, shooterChance:0.3, grenadierChance:0.05 },
-  2: { name:'Лес',          waves:2, boss:false, maxEnemies:7,  enemySpeed:1.4, enemyHealth:45, enemyDamage:0.6, shooterChance:0.4, grenadierChance:0.1 },
-  3: { name:'База',         waves:3, boss:false, maxEnemies:9,  enemySpeed:1.6, enemyHealth:60, enemyDamage:0.7, shooterChance:0.5, grenadierChance:0.15 },
-  4: { name:'Руины',        waves:4, boss:false, maxEnemies:11, enemySpeed:1.8, enemyHealth:75, enemyDamage:0.8, shooterChance:0.6, grenadierChance:0.2 },
-  5: { name:'Логово Босса', waves:5, boss:true,  maxEnemies:12, enemySpeed:2.0, enemyHealth:90, enemyDamage:1.0, shooterChance:0.6, grenadierChance:0.25 }
+  1: { name:'Лагерь',     icon:'⛺', waves:1, boss:false, maxEnemies:5,  enemySpeed:1.2, enemyHealth:30,  enemyDamage:0.5, shooterChance:0.3, grenadierChance:0.05, theme:'grass',  fog:0x87a5c4, sky:0x87a5c4 },
+  2: { name:'Лес',        icon:'🌲', waves:2, boss:false, maxEnemies:7,  enemySpeed:1.4, enemyHealth:45,  enemyDamage:0.6, shooterChance:0.4, grenadierChance:0.10, theme:'forest', fog:0x4a6a4a, sky:0x6a8a6a },
+  3: { name:'Деревня',    icon:'🏘️', waves:3, boss:false, maxEnemies:9,  enemySpeed:1.6, enemyHealth:60,  enemyDamage:0.7, shooterChance:0.5, grenadierChance:0.15, theme:'village',fog:0x8a7a5a, sky:0xa89a7a },
+  4: { name:'Пустыня',    icon:'🏜️', waves:4, boss:false, maxEnemies:11, enemySpeed:1.8, enemyHealth:75,  enemyDamage:0.8, shooterChance:0.6, grenadierChance:0.20, theme:'desert', fog:0xd4b878, sky:0xe8d0a0 },
+  5: { name:'Завод',      icon:'🏭', waves:5, boss:false, maxEnemies:12, enemySpeed:1.9, enemyHealth:90,  enemyDamage:0.9, shooterChance:0.6, grenadierChance:0.25, theme:'factory',fog:0x6a6a7a, sky:0x8a8a9a },
+  6: { name:'Метро',      icon:'🚇', waves:6, boss:false, maxEnemies:13, enemySpeed:2.0, enemyHealth:110, enemyDamage:1.0, shooterChance:0.65, grenadierChance:0.3, theme:'metro',  fog:0x2a2a3a, sky:0x1a1a2a },
+  7: { name:'Лаборатория',icon:'🧪', waves:7, boss:false, maxEnemies:14, enemySpeed:2.1, enemyHealth:130, enemyDamage:1.2, shooterChance:0.7, grenadierChance:0.35, theme:'lab',    fog:0x4a8a6a, sky:0x6aaa8a },
+  8: { name:'Логово Босса',icon:'💀',waves:8, boss:true,  maxEnemies:15, enemySpeed:2.3, enemyHealth:150, enemyDamage:1.4, shooterChance:0.7, grenadierChance:0.4, theme:'lair',   fog:0x4a0000, sky:0x2a0000 }
 };
 
-// ============ ОРУЖИЕ ============
 const WEAPONS = {
-  pistol:      { name:'Пистолет',      ammo:15,  maxAmmo:15,  damage:35,  cooldown:280,  spread:0.004, auto:false, reload:1100 },
-  rifle:       { name:'Автомат',       ammo:30,  maxAmmo:30,  damage:22,  cooldown:90,   spread:0.012, auto:true,  reload:1800 },
-  shotgun:     { name:'Дробовик',      ammo:6,   maxAmmo:6,   damage:20,  cooldown:750,  spread:0.055, auto:false, reload:2000, pellets:10 },
-  sniper:      { name:'Снайперка',     ammo:5,   maxAmmo:5,   damage:200, cooldown:1600, spread:0.001, auto:false, reload:2600, zoom:true, cost:500 },
-  dualPistols: { name:'Два пистолета', ammo:30,  maxAmmo:30,  damage:25,  cooldown:150,  spread:0.022, auto:true,  reload:1500, cost:300 },
-  flamethrower:{ name:'Огнемёт',       ammo:100, maxAmmo:100, damage:6,   cooldown:50,   spread:0.14,  auto:true,  reload:3000, shortRange:12, cost:800 }
+  pistol:      { name:'Пистолет',      ammo:15,  maxAmmo:15,  damage:35,  cooldown:280,  spread:0.004, auto:false, reload:1100, icon:'pistol', cost:0 },
+  rifle:       { name:'Автомат',       ammo:30,  maxAmmo:30,  damage:22,  cooldown:90,   spread:0.012, auto:true,  reload:1800, icon:'rifle',  cost:0 },
+  shotgun:     { name:'Дробовик',      ammo:6,   maxAmmo:6,   damage:20,  cooldown:750,  spread:0.055, auto:false, reload:2000, icon:'shotgun',cost:0, pellets:10 },
+  sniper:      { name:'Снайперка',     ammo:5,   maxAmmo:5,   damage:200, cooldown:1600, spread:0.001, auto:false, reload:2600, icon:'sniper', cost:500, zoom:true },
+  dualPistols: { name:'Два пистолета', ammo:30,  maxAmmo:30,  damage:25,  cooldown:150,  spread:0.022, auto:true,  reload:1500, icon:'dual',   cost:300 },
+  flamethrower:{ name:'Огнемёт',       ammo:100, maxAmmo:100, damage:6,   cooldown:50,   spread:0.14,  auto:true,  reload:3000, icon:'flame',  cost:800, shortRange:12 }
 };
 
-// ============ СКИНЫ ============
 const SKINS = {
-  default:  { name:'Новобранец',  body:0x4a6b3a, head:0x7a9a4a, cost:0 },
-  soldier:  { name:'Солдат',      body:0x556b3a, head:0x8aaa5a, cost:200 },
-  commando: { name:'Коммандос',   body:0x2a3a2a, head:0x5a7a3a, cost:500 },
-  ghost:    { name:'Призрак',     body:0x888888, head:0xcccccc, cost:1000 }
+  default:  { name:'Новобранец', body:0x4a6b3a, head:0x7a9a4a, cost:0 },
+  soldier:  { name:'Солдат',     body:0x556b3a, head:0x8aaa5a, cost:200 },
+  commando: { name:'Коммандос',  body:0x2a3a2a, head:0x5a7a3a, cost:500 },
+  ghost:    { name:'Призрак',    body:0x888888, head:0xcccccc, cost:1000 }
 };
 
-// ============ СОСТОЯНИЕ ИГРЫ ============
 let scene, camera, renderer;
 let score = 0, health = 100, wave = 1, currentLevel = 1;
 let hitsTaken = 0;
 let isGameActive = false;
-let enemies = [], obstacles = [], enemyBullets = [], grenades = [], lootCrates = [];
-let currentBoss = null;
-let bossMaxHealth = 0;
+let enemies = [], obstacles = [], enemyBullets = [], grenades = [], lootCrates = [], decorations = [];
+let currentBoss = null, bossMaxHealth = 0;
 let clock = new THREE.Clock();
 let yaw = 0, pitch = 0, recoilPitch = 0;
 let verticalVelocity = 0, playerY = 1.7, isJumping = false;
 const GRAVITY = 22, JUMP_POWER = 8;
-let MOUSE_SENSITIVITY = 0.002;
-let volume = 0.4;
-let medkits = 2;
+let MOUSE_SENSITIVITY = 0.002, volume = 0.4, medkits = 2;
 const MAX_MEDKITS = 5;
 
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in window && window.innerWidth < 1200);
@@ -116,15 +105,9 @@ function init() {
   sun.castShadow = !isMobile;
   scene.add(sun);
 
-  const sky = new THREE.Mesh(new THREE.SphereGeometry(150, 32, 16), new THREE.MeshBasicMaterial({ color: 0x87a5c4, side: THREE.BackSide, fog: false }));
-  scene.add(sky);
-
-  createGround();
-  createBase();
-  createWeapon(currentWeapon);
+  buildLevelEnvironment(1);
 
   try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){}
-
   setupControls();
   animate();
   setupUI();
@@ -132,41 +115,243 @@ function init() {
   updateCoinsDisplay();
 }
 
-// ============ ЗЕМЛЯ ============
-function createGround() {
-  const g = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({ color: 0x4a6b3a, roughness: 1 }));
-  g.rotation.x = -Math.PI/2; g.receiveShadow = true; scene.add(g);
-  const road = new THREE.Mesh(new THREE.PlaneGeometry(10, 80), new THREE.MeshStandardMaterial({ color: 0x2a2a2e }));
-  road.rotation.x = -Math.PI/2; road.position.y = 0.02; scene.add(road);
+// ============ ОКРУЖЕНИЕ УРОВНЯ ============
+function clearLevelEnvironment() {
+  // Удаляем всё из прошлого уровня кроме камеры и света
+  for (let i = scene.children.length - 1; i >= 0; i--) {
+    const child = scene.children[i];
+    if (child === camera) continue;
+    if (child.isLight) continue;
+    if (child.type === 'AmbientLight' || child.type === 'DirectionalLight' || child.type === 'HemisphereLight') continue;
+    scene.remove(child);
+  }
+  obstacles = [];
+  decorations = [];
 }
 
-// ============ БАЗА ============
-function createBase() {
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0x5a5a5a });
+function buildLevelEnvironment(levelNum) {
+  clearLevelEnvironment();
+  const lvl = LEVELS[levelNum];
+  scene.background = new THREE.Color(lvl.sky);
+  scene.fog = new THREE.Fog(lvl.fog, 40, 120);
+
+  // Небо-сфера
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(150, 32, 16), new THREE.MeshBasicMaterial({ color: lvl.sky, side: THREE.BackSide, fog: false }));
+  scene.add(sky);
+
+  // Земля по теме уровня
+  const groundColors = {
+    grass: 0x4a6b3a, forest: 0x2a4a2a, village: 0x6a5a3a, desert: 0xc4a868,
+    factory: 0x5a5a5a, metro: 0x2a2a2e, lab: 0x3a5a4a, lair: 0x3a0a0a
+  };
+  const groundColor = groundColors[lvl.theme] || 0x4a6b3a;
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({ color: groundColor, roughness: 1 }));
+  ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
+
+  // Стены вокруг
+  const wallColors = {
+    grass: 0x5a5a5a, forest: 0x3a2a1a, village: 0x8a7a5a, desert: 0xa8885a,
+    factory: 0x4a4a4a, metro: 0x1a1a2a, lab: 0x4a6a5a, lair: 0x4a0000
+  };
+  const wallMat = new THREE.MeshStandardMaterial({ color: wallColors[lvl.theme] || 0x5a5a5a });
   [
-    { pos:[0,2,-48], size:[96,4,1] }, { pos:[0,2,48], size:[96,4,1] },
-    { pos:[-48,2,0], size:[1,4,96] }, { pos:[48,2,0], size:[1,4,96] }
+    { pos:[0,3,-48], size:[96,6,1] }, { pos:[0,3,48], size:[96,6,1] },
+    { pos:[-48,3,0], size:[1,6,96] }, { pos:[48,3,0], size:[1,6,96] }
   ].forEach(w => {
     const wall = new THREE.Mesh(new THREE.BoxGeometry(...w.size), wallMat);
     wall.position.set(...w.pos); wall.castShadow = true; wall.receiveShadow = true;
     wall.userData.size = { x:w.size[0], y:w.size[1], z:w.size[2] };
     scene.add(wall); obstacles.push(wall);
   });
-  const hescoMat = new THREE.MeshStandardMaterial({ color: 0x8a7a5a });
-  [[12,1.5,8,3,3,2],[-12,1.5,8,3,3,2],[12,1.5,-8,3,3,2],[-12,1.5,-8,3,3,2]].forEach(([x,y,z,sx,sy,sz]) => {
-    const h = new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz), hescoMat);
-    h.position.set(x,y,z); h.castShadow = true; h.receiveShadow = true;
-    h.userData.size = { x:sx, y:sy, z:sz }; scene.add(h); obstacles.push(h);
-  });
-  const crateMat = new THREE.MeshStandardMaterial({ color: 0x6a552a });
-  [[8,0.6,3],[-8,0.6,3],[8,0.6,-3],[-8,0.6,-3]].forEach(([x,y,z]) => {
-    const c = new THREE.Mesh(new THREE.BoxGeometry(1.2,1.2,1.2), crateMat);
+
+  // Добавляем декор по теме
+  if (lvl.theme === 'forest') addForestDecor();
+  else if (lvl.theme === 'village') addVillageDecor();
+  else if (lvl.theme === 'desert') addDesertDecor();
+  else if (lvl.theme === 'factory') addFactoryDecor();
+  else if (lvl.theme === 'metro') addMetroDecor();
+  else if (lvl.theme === 'lab') addLabDecor();
+  else if (lvl.theme === 'lair') addLairDecor();
+  else addGrassDecor();
+}
+
+function addGrassDecor() {
+  // Трава-инстансы
+  const gGeo = new THREE.PlaneGeometry(0.5, 1);
+  const gMat = new THREE.MeshStandardMaterial({ color: 0x5a8a3a, side: THREE.DoubleSide });
+  const grass = new THREE.InstancedMesh(gGeo, gMat, 400);
+  const d = new THREE.Object3D();
+  for (let i = 0; i < 400; i++) {
+    d.position.set((Math.random()-0.5)*180, 0.5, (Math.random()-0.5)*180);
+    d.rotation.y = Math.random()*Math.PI;
+    d.scale.setScalar(0.6 + Math.random()*0.8);
+    d.updateMatrix(); grass.setMatrixAt(i, d.matrix);
+  }
+  scene.add(grass);
+  addObstacleCubes(0x6a552a);
+}
+
+function addForestDecor() {
+  // Деревья — конус + цилиндр
+  for (let i = 0; i < 40; i++) {
+    const tree = new THREE.Group();
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 3, 6), new THREE.MeshStandardMaterial({ color: 0x3a2a1a }));
+    trunk.position.y = 1.5; trunk.castShadow = true; tree.add(trunk);
+    const leaves = new THREE.Mesh(new THREE.ConeGeometry(2.5, 5, 8), new THREE.MeshStandardMaterial({ color: 0x2a5a2a }));
+    leaves.position.y = 5; leaves.castShadow = true; tree.add(leaves);
+    const x = (Math.random()-0.5)*85;
+    const z = (Math.random()-0.5)*85;
+    if (Math.abs(x) < 10 && Math.abs(z) < 10) continue;
+    tree.position.set(x, 0, z);
+    tree.userData.size = { x: 2, y: 6, z: 2 };
+    scene.add(tree);
+    if (Math.random() > 0.5) obstacles.push(tree);
+  }
+  addObstacleCubes(0x4a3a2a);
+}
+
+function addVillageDecor() {
+  // Домики
+  for (let i = 0; i < 12; i++) {
+    const house = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(6, 4, 6), new THREE.MeshStandardMaterial({ color: 0x8a6a4a }));
+    body.position.y = 2; body.castShadow = true; body.receiveShadow = true; house.add(body);
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(5, 3, 4), new THREE.MeshStandardMaterial({ color: 0x6a2a2a }));
+    roof.position.y = 5.5; roof.rotation.y = Math.PI/4; roof.castShadow = true; house.add(roof);
+    const angle = (i / 12) * Math.PI * 2;
+    const radius = 25 + Math.random() * 15;
+    house.position.set(Math.cos(angle)*radius, 0, Math.sin(angle)*radius);
+    house.userData.size = { x: 6, y: 4, z: 6 };
+    scene.add(house); obstacles.push(house);
+  }
+  // Заборчики
+  const fenceMat = new THREE.MeshStandardMaterial({ color: 0x5a3a1a });
+  for (let i = 0; i < 20; i++) {
+    const fence = new THREE.Mesh(new THREE.BoxGeometry(2, 1.5, 0.2), fenceMat);
+    fence.position.set((Math.random()-0.5)*80, 0.75, (Math.random()-0.5)*80);
+    fence.rotation.y = Math.random() * Math.PI;
+    scene.add(fence);
+  }
+}
+
+function addDesertDecor() {
+  // Кактусы
+  for (let i = 0; i < 25; i++) {
+    const cactus = new THREE.Group();
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 4, 8), new THREE.MeshStandardMaterial({ color: 0x3a6a2a }));
+    trunk.position.y = 2; trunk.castShadow = true; cactus.add(trunk);
+    if (Math.random() > 0.5) {
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 1.5, 6), new THREE.MeshStandardMaterial({ color: 0x3a6a2a }));
+      arm.position.set(0.8, 2.5, 0); arm.rotation.z = -Math.PI/3; arm.castShadow = true; cactus.add(arm);
+    }
+    cactus.position.set((Math.random()-0.5)*80, 0, (Math.random()-0.5)*80);
+    cactus.userData.size = { x: 1, y: 4, z: 1 };
+    scene.add(cactus);
+    if (Math.random() > 0.5) obstacles.push(cactus);
+  }
+  // Скалы
+  for (let i = 0; i < 15; i++) {
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1 + Math.random()*1.5), new THREE.MeshStandardMaterial({ color: 0xa8885a }));
+    rock.position.set((Math.random()-0.5)*85, 0.5, (Math.random()-0.5)*85);
+    rock.castShadow = true; rock.receiveShadow = true;
+    rock.userData.size = { x: 2, y: 2, z: 2 };
+    scene.add(rock); obstacles.push(rock);
+  }
+}
+
+function addFactoryDecor() {
+  // Контейнеры и бочки
+  const containerMat = new THREE.MeshStandardMaterial({ color: 0x3a6a8a, metalness: 0.4 });
+  for (let i = 0; i < 15; i++) {
+    const c = new THREE.Mesh(new THREE.BoxGeometry(4, 3, 8), containerMat);
+    c.position.set((Math.random()-0.5)*80, 1.5, (Math.random()-0.5)*80);
+    c.castShadow = true; c.receiveShadow = true;
+    c.userData.size = { x: 4, y: 3, z: 8 };
+    scene.add(c); obstacles.push(c);
+  }
+  // Трубы
+  const pipeMat = new THREE.MeshStandardMaterial({ color: 0x8a8a8a, metalness: 0.7 });
+  for (let i = 0; i < 10; i++) {
+    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 8, 8), pipeMat);
+    pipe.position.set((Math.random()-0.5)*80, 4, (Math.random()-0.5)*80);
+    pipe.castShadow = true;
+    scene.add(pipe);
+  }
+}
+
+function addMetroDecor() {
+  // Колонны
+  const pillarMat = new THREE.MeshStandardMaterial({ color: 0x4a4a5a });
+  for (let i = 0; i < 20; i++) {
+    const x = ((i % 5) - 2) * 15;
+    const z = (Math.floor(i / 5) - 1.5) * 20;
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 8, 8), pillarMat);
+    p.position.set(x, 4, z);
+    p.castShadow = true; p.receiveShadow = true;
+    p.userData.size = { x: 1.2, y: 8, z: 1.2 };
+    scene.add(p); obstacles.push(p);
+  }
+  // Скамейки
+  const benchMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a });
+  for (let i = 0; i < 8; i++) {
+    const bench = new THREE.Mesh(new THREE.BoxGeometry(3, 0.5, 1), benchMat);
+    bench.position.set((Math.random()-0.5)*70, 0.25, (Math.random()-0.5)*70);
+    bench.castShadow = true;
+    scene.add(bench);
+  }
+}
+
+function addLabDecor() {
+  // Колбы и ящики
+  for (let i = 0; i < 20; i++) {
+    const flask = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 1.5, 12), new THREE.MeshStandardMaterial({ color: 0x00cc88, transparent: true, opacity: 0.7, emissive: 0x00aa66, emissiveIntensity: 0.3 }));
+    flask.position.set((Math.random()-0.5)*80, 0.75, (Math.random()-0.5)*80);
+    scene.add(flask);
+  }
+  const crateMat = new THREE.MeshStandardMaterial({ color: 0x4a6a5a });
+  for (let i = 0; i < 12; i++) {
+    const c = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), crateMat);
+    c.position.set((Math.random()-0.5)*80, 1, (Math.random()-0.5)*80);
+    c.castShadow = true; c.receiveShadow = true;
+    c.userData.size = { x: 2, y: 2, z: 2 };
+    scene.add(c); obstacles.push(c);
+  }
+}
+
+function addLairDecor() {
+  // Кости и черепа
+  const boneMat = new THREE.MeshStandardMaterial({ color: 0xccc8b8 });
+  for (let i = 0; i < 30; i++) {
+    const bone = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 1, 6), boneMat);
+    bone.position.set((Math.random()-0.5)*80, 0.2, (Math.random()-0.5)*80);
+    bone.rotation.z = Math.PI/2; bone.rotation.y = Math.random()*Math.PI;
+    scene.add(bone);
+  }
+  // Огненные ямы
+  for (let i = 0; i < 6; i++) {
+    const pit = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 0.3, 12), new THREE.MeshStandardMaterial({ color: 0x1a0000 }));
+    pit.position.set((Math.random()-0.5)*70, 0.15, (Math.random()-0.5)*70);
+    scene.add(pit);
+    const fire = new THREE.PointLight(0xff4400, 1.5, 15);
+    fire.position.set(pit.position.x, 1, pit.position.z);
+    scene.add(fire);
+    const fireMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff4400, transparent: true, opacity: 0.6 }));
+    fireMesh.position.set(pit.position.x, 1.5, pit.position.z);
+    scene.add(fireMesh);
+  }
+}
+
+function addObstacleCubes(color) {
+  const mat = new THREE.MeshStandardMaterial({ color });
+  [[12,1,8,3,2,3],[-12,1,8,3,2,3],[12,1,-8,3,2,3],[-12,1,-8,3,2,3]].forEach(([x,y,z,sx,sy,sz]) => {
+    const c = new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz), mat);
     c.position.set(x,y,z); c.castShadow = true; c.receiveShadow = true;
-    c.userData.size = { x:1.2, y:1.2, z:1.2 }; scene.add(c); obstacles.push(c);
+    c.userData.size = { x:sx, y:sy, z:sz };
+    scene.add(c); obstacles.push(c);
   });
 }
 
-// ============ ОРУЖИЕ ============
+// ============ ОРУЖИЕ (3D модель в руках) ============
 function createWeapon(type) {
   if (weaponGroup) camera.remove(weaponGroup);
   weaponGroup = new THREE.Group();
@@ -203,10 +388,8 @@ function createWeapon(type) {
     const g2 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.18, 0.08), grip); g2.position.set(0.15, -0.13, 0.02); g2.rotation.x = 0.25; weaponGroup.add(g2);
     weaponGroup.position.set(0, -0.25, -0.5);
   }
-
   const flash = new THREE.PointLight(0xffaa00, 0, 6);
-  flash.position.set(0, 0.03, -0.9);
-  weaponGroup.add(flash);
+  flash.position.set(0, 0.03, -0.9); weaponGroup.add(flash);
   weaponGroup.userData.flash = flash;
   camera.add(weaponGroup);
 }
@@ -222,17 +405,12 @@ function createZombie(isBoss) {
   const metal = new THREE.MeshStandardMaterial({ color: skinColors.helmet, metalness: 0.7 });
   const glow = new THREE.MeshBasicMaterial({ color: isBoss ? 0xffaa00 : 0xff0000 });
   const size = isBoss ? 1.8 : 1;
-
-  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.35*size, 0.32*size, 1.0*size, 12), uniform);
-  torso.position.y = 0.5*size; torso.castShadow = true; g.add(torso);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.28*size, 16, 12), skin);
-  head.position.y = 1.45*size; head.castShadow = true; g.add(head);
-  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.34*size, 16, 10, 0, Math.PI*2, 0, Math.PI/2), metal);
-  helmet.position.y = 1.55*size; helmet.castShadow = true; g.add(helmet);
+  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.35*size, 0.32*size, 1.0*size, 12), uniform); torso.position.y = 0.5*size; torso.castShadow = true; g.add(torso);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.28*size, 16, 12), skin); head.position.y = 1.45*size; head.castShadow = true; g.add(head);
+  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.34*size, 16, 10, 0, Math.PI*2, 0, Math.PI/2), metal); helmet.position.y = 1.55*size; helmet.castShadow = true; g.add(helmet);
   const eL = new THREE.Mesh(new THREE.SphereGeometry(0.05*size, 8, 8), glow); eL.position.set(-0.1*size, 1.48*size, -0.24*size); g.add(eL);
   const eR = new THREE.Mesh(new THREE.SphereGeometry(0.05*size, 8, 8), glow); eR.position.set(0.1*size, 1.48*size, -0.24*size); g.add(eR);
-  const zGun = new THREE.Mesh(new THREE.BoxGeometry(0.15*size, 0.15*size, 0.7*size), new THREE.MeshStandardMaterial({ color: 0x1a1a1a }));
-  zGun.position.set(0.35*size, 0.75*size, -0.5*size); g.add(zGun);
+  const zGun = new THREE.Mesh(new THREE.BoxGeometry(0.15*size, 0.15*size, 0.7*size), new THREE.MeshStandardMaterial({ color: 0x1a1a1a })); zGun.position.set(0.35*size, 0.75*size, -0.5*size); g.add(zGun);
   g.position.y = 0.85*size;
   return g;
 }
@@ -241,42 +419,24 @@ function spawnEnemy(isBoss = false) {
   if (!isGameActive) return;
   const lvl = LEVELS[currentLevel];
   if (!isBoss && enemies.length >= lvl.maxEnemies) return;
-
   const e = createZombie(isBoss);
   const range = isBoss ? 20 : 45;
-  const sides = [
-    [-range,-30],[-range,0],[-range,30],[range,-30],[range,0],[range,30],
-    [-30,-range],[0,-range],[30,-range],[-30,range],[0,range],[30,range]
-  ];
-  const s = sides[Math.floor(Math.random() * sides.length)];
+  const sides = [[-range,-30],[-range,0],[-range,30],[range,-30],[range,0],[range,30],[-30,-range],[0,-range],[30,-range],[-30,range],[0,range],[30,range]];
+  const s = sides[Math.floor(Math.random()*sides.length)];
   e.position.set(s[0] + (Math.random()-0.5)*3, 0.85*(isBoss?1.8:1), s[1] + (Math.random()-0.5)*3);
-
   let type = 'melee';
   if (!isBoss) {
     const r = Math.random();
     if (r < lvl.shooterChance) type = 'shooter';
     else if (r < lvl.shooterChance + lvl.grenadierChance) type = 'grenadier';
   }
-
   const baseHealth = isBoss ? 1500 : lvl.enemyHealth;
-  e.userData = {
-    type, isBoss: !!isBoss,
-    health: baseHealth,
-    maxHealth: baseHealth,
-    speed: isBoss ? 1.5 : lvl.enemySpeed + Math.random()*0.3,
-    radius: isBoss ? 1.2 : 0.5,
-    walkPhase: Math.random() * Math.PI * 2,
-    nextShotTime: performance.now() + 2000 + Math.random()*3000,
-    weaponDrop: type === 'shooter' ? 'rifle' : (type === 'grenadier' ? 'shotgun' : 'pistol')
-  };
-  scene.add(e);
-  enemies.push(e);
-
+  e.userData = { type, isBoss: !!isBoss, health: baseHealth, maxHealth: baseHealth, speed: isBoss ? 1.5 : lvl.enemySpeed + Math.random()*0.3, radius: isBoss ? 1.2 : 0.5, walkPhase: Math.random()*Math.PI*2, nextShotTime: performance.now() + 2000 + Math.random()*3000, weaponDrop: type === 'shooter' ? 'rifle' : (type === 'grenadier' ? 'shotgun' : 'pistol') };
+  scene.add(e); enemies.push(e);
   if (isBoss) {
-    currentBoss = e;
-    bossMaxHealth = baseHealth;
+    currentBoss = e; bossMaxHealth = baseHealth;
     document.getElementById('bossBar').style.display = 'block';
-    document.getElementById('bossName').textContent = '💀 БОСС УРОВНЯ ' + currentLevel;
+    document.getElementById('bossName').innerHTML = '<svg class="ico-hud"><use href="#icon-skull"/></svg> БОСС УРОВНЯ ' + currentLevel;
     updateBossBar();
   }
 }
@@ -287,7 +447,9 @@ function updateBossBar() {
   document.getElementById('bossHealthFill').style.width = pct + '%';
 }
 
-// ============ КОЛЛИЗИИ ============
+// ============ КОЛЛИЗИИ / СТРЕЛЬБА / ВРАГИ / ЗВУКИ / УПРАВЛЕНИЕ ============
+// (Те же функции что в v10.0, копируй полностью из прошлого файла, они не изменились)
+
 function checkCollision(pos, r) {
   if (Math.abs(pos.x) > 46.5 || Math.abs(pos.z) > 46.5) return true;
   for (const o of obstacles) {
@@ -300,24 +462,19 @@ function checkCollision(pos, r) {
   return false;
 }
 
-// ============ СТРЕЛЬБА ============
 function shoot() {
   if (!isGameActive || reloading) return;
   const w = WEAPONS[currentWeapon];
   const now = performance.now();
   if (now - lastShotTime < w.cooldown) return;
   if (w.ammo <= 0) { reload(); return; }
-
   lastShotTime = now; w.ammo--; updateHUD();
   recoilPitch += currentWeapon === 'shotgun' ? 0.07 : (currentWeapon === 'sniper' ? 0.09 : 0.028);
   playShootSound();
-
   if (weaponGroup.userData.flash) {
     weaponGroup.userData.flash.intensity = 4;
     setTimeout(() => { if (weaponGroup.userData.flash) weaponGroup.userData.flash.intensity = 0; }, 60);
   }
-
-  // Огнемёт — короткая дистанция
   const maxRange = w.shortRange || 150;
   const pellets = w.pellets || 1;
   for (let i = 0; i < pellets; i++) {
@@ -384,21 +541,17 @@ function killEnemy(en) {
   scene.remove(en);
   enemies = enemies.filter(e => e !== en);
   score += en.userData.isBoss ? 500 : 10;
-  playHitSound();
-  updateHUD();
-
+  playHitSound(); updateHUD();
   if (en.userData.isBoss) {
     currentBoss = null;
     document.getElementById('bossBar').style.display = 'none';
     setTimeout(() => completeLevel(), 800);
     return;
   }
-
   spawnLootCrate(en.position.clone(), en.userData.weaponDrop);
   if (Math.random() < 0.3) spawnMedkitPickup(en.position.clone());
 }
 
-// ============ ЛУТ ============
 function spawnLootCrate(pos, weaponType) {
   const g = new THREE.Group();
   const box = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), new THREE.MeshStandardMaterial({ color: 0x8a6a2a, metalness: 0.5 }));
@@ -443,19 +596,15 @@ function updateLootCrates(delta) {
 function pickUpLoot() {
   if (!nearLootCrate) return;
   if (nearLootCrate.userData.isMedkit) {
-    medkits = Math.min(MAX_MEDKITS, medkits + 1);
-    showToast('+1 🩹 Аптечка');
+    medkits = Math.min(MAX_MEDKITS, medkits + 1); showToast('+1 Аптечка');
   } else {
     const nw = nearLootCrate.userData.weapon;
     WEAPONS[nw].ammo = WEAPONS[nw].maxAmmo;
-    currentWeapon = nw;
-    createWeapon(nw);
-    showToast('Получено: ' + WEAPONS[nw].name);
+    currentWeapon = nw; createWeapon(nw); showToast('Получено: ' + WEAPONS[nw].name);
   }
   scene.remove(nearLootCrate);
   lootCrates = lootCrates.filter(c => c !== nearLootCrate);
-  nearLootCrate = null;
-  updateHUD();
+  nearLootCrate = null; updateHUD();
 }
 
 function showToast(text) {
@@ -472,16 +621,13 @@ if (!document.getElementById('toastStyle')) {
   document.head.appendChild(s);
 }
 
-// ============ АПТЕЧКА ============
 function useMedkit() {
   if (!isGameActive) return;
   if (medkits <= 0) { showToast('Нет аптечек!'); return; }
   if (health >= 100) { showToast('Здоровье полное'); return; }
-  medkits--; health = Math.min(100, health + 40);
-  updateHUD(); showToast('+40 ❤️'); playHealSound();
+  medkits--; health = Math.min(100, health + 40); updateHUD(); showToast('+40 HP'); playHealSound();
 }
 
-// ============ ЗВУКИ ============
 function playShootSound() {
   if (!audioCtx) return;
   const o = audioCtx.createOscillator(), g = audioCtx.createGain();
@@ -499,8 +645,7 @@ function playHitSound() {
   o.type = 'sine'; o.frequency.setValueAtTime(900, audioCtx.currentTime);
   g.gain.setValueAtTime(0.1 * volume, audioCtx.currentTime);
   g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
-  o.connect(g); g.connect(audioCtx.destination);
-  o.start(); o.stop(audioCtx.currentTime + 0.15);
+  o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + 0.15);
 }
 function playHealSound() {
   if (!audioCtx) return;
@@ -509,11 +654,9 @@ function playHealSound() {
   o.frequency.exponentialRampToValueAtTime(900, audioCtx.currentTime + 0.3);
   g.gain.setValueAtTime(0.1 * volume, audioCtx.currentTime);
   g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
-  o.connect(g); g.connect(audioCtx.destination);
-  o.start(); o.stop(audioCtx.currentTime + 0.35);
+  o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + 0.35);
 }
 
-// ============ ВРАЖДЕБНЫЕ АТАКИ ============
 function enemyShoot(en) {
   const start = en.position.clone(); start.y = en.userData.isBoss ? 2.5 : 1.4;
   const target = camera.position.clone();
@@ -538,10 +681,7 @@ function updateEnemyBullets(delta) {
     const b = enemyBullets[i];
     b.mesh.position.addScaledVector(b.dir, b.speed * delta);
     b.life -= delta;
-    if (b.mesh.position.distanceTo(camera.position) < 0.6) {
-      takeDamage(b.damage);
-      scene.remove(b.mesh); enemyBullets.splice(i, 1); continue;
-    }
+    if (b.mesh.position.distanceTo(camera.position) < 0.6) { takeDamage(b.damage); scene.remove(b.mesh); enemyBullets.splice(i, 1); continue; }
     if (b.life <= 0) { scene.remove(b.mesh); enemyBullets.splice(i, 1); }
   }
 }
@@ -572,9 +712,7 @@ function updateGrenades(delta) {
   }
 }
 function takeDamage(amount) {
-  health -= amount;
-  hitsTaken++;
-  showDamage(); updateHUD();
+  health -= amount; hitsTaken++; showDamage(); updateHUD();
   if (health <= 0) gameOver();
 }
 function showDamage() {
@@ -584,7 +722,6 @@ function showDamage() {
   setTimeout(() => v.style.opacity = '0', 150);
 }
 
-// ============ УПРАВЛЕНИЕ ============
 function setupControls() {
   document.addEventListener('keydown', (e) => {
     if (!isGameActive) return;
@@ -626,36 +763,23 @@ function setupControls() {
 }
 
 function switchWeapon(type) {
-  if (!PROGRESS.ownedWeapons.includes(type)) { showToast('🔒 Не куплено'); return; }
-  currentWeapon = type;
-  WEAPONS[type].ammo = WEAPONS[type].maxAmmo;
-  reloading = false;
-  createWeapon(type);
-  updateHUD();
+  if (!PROGRESS.ownedWeapons.includes(type)) { showToast('Не куплено'); return; }
+  currentWeapon = type; WEAPONS[type].ammo = WEAPONS[type].maxAmmo;
+  reloading = false; createWeapon(type); updateHUD();
 }
-
 function cycleWeapon() {
   const owned = PROGRESS.ownedWeapons;
   const idx = owned.indexOf(currentWeapon);
-  const next = owned[(idx + 1) % owned.length];
-  switchWeapon(next);
+  switchWeapon(owned[(idx + 1) % owned.length]);
 }
 
 function setupMobileControls() {
-  const jz = document.getElementById('joystickZone');
-  const jb = document.getElementById('joystickBase');
-  const jk = document.getElementById('joystickKnob');
-  const btnShoot = document.getElementById('btnShoot');
-  const btnJump = document.getElementById('btnJump');
-  const btnReload = document.getElementById('btnReload');
-  const btnMedkit = document.getElementById('btnMedkit');
-  const btnWeapon = document.getElementById('btnWeapon');
-  const btnPickup = document.getElementById('btnPickup');
+  const jz = document.getElementById('joystickZone'), jb = document.getElementById('joystickBase'), jk = document.getElementById('joystickKnob');
+  const btnShoot = document.getElementById('btnShoot'), btnJump = document.getElementById('btnJump'), btnReload = document.getElementById('btnReload');
+  const btnMedkit = document.getElementById('btnMedkit'), btnWeapon = document.getElementById('btnWeapon'), btnPickup = document.getElementById('btnPickup');
   if (!jz) return;
-
   jz.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    const t = e.changedTouches[0];
+    e.preventDefault(); const t = e.changedTouches[0];
     joystickTouchId = t.identifier; joystickActive = true;
     joystickStartX = t.clientX; joystickStartY = t.clientY;
     jb.style.display = 'block'; jb.style.left = joystickStartX + 'px'; jb.style.top = joystickStartY + 'px';
@@ -672,22 +796,12 @@ function setupMobileControls() {
       jk.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
     }
   }, { passive: false });
-  const resetJoy = (e) => {
-    for (const t of e.changedTouches) {
-      if (t.identifier !== joystickTouchId) continue;
-      joystickActive = false; joystickTouchId = null; joystickDeltaX = 0; joystickDeltaY = 0;
-      jb.style.display = 'none';
-    }
-  };
-  jz.addEventListener('touchend', resetJoy);
-  jz.addEventListener('touchcancel', resetJoy);
-
+  const resetJoy = (e) => { for (const t of e.changedTouches) { if (t.identifier !== joystickTouchId) continue; joystickActive = false; joystickTouchId = null; joystickDeltaX = 0; joystickDeltaY = 0; jb.style.display = 'none'; } };
+  jz.addEventListener('touchend', resetJoy); jz.addEventListener('touchcancel', resetJoy);
   document.addEventListener('touchstart', (e) => {
     if (!isGameActive) return;
     for (const t of e.changedTouches) {
-      if (t.clientX > window.innerWidth/2 && lookTouchId === null) {
-        lookTouchId = t.identifier; lookLastX = t.clientX; lookLastY = t.clientY;
-      }
+      if (t.clientX > window.innerWidth/2 && lookTouchId === null) { lookTouchId = t.identifier; lookLastX = t.clientX; lookLastY = t.clientY; }
     }
   }, { passive: true });
   document.addEventListener('touchmove', (e) => {
@@ -700,12 +814,8 @@ function setupMobileControls() {
       lookLastX = t.clientX; lookLastY = t.clientY;
     }
   }, { passive: true });
-  const resetLook = (e) => {
-    for (const t of e.changedTouches) if (t.identifier === lookTouchId) lookTouchId = null;
-  };
-  document.addEventListener('touchend', resetLook);
-  document.addEventListener('touchcancel', resetLook);
-
+  const resetLook = (e) => { for (const t of e.changedTouches) if (t.identifier === lookTouchId) lookTouchId = null; };
+  document.addEventListener('touchend', resetLook); document.addEventListener('touchcancel', resetLook);
   if (btnShoot) {
     btnShoot.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); btnShoot.classList.add('pressed'); isMouseDown = true; if (isGameActive) shoot(); }, { passive: false });
     btnShoot.addEventListener('touchend', (e) => { e.preventDefault(); e.stopPropagation(); btnShoot.classList.remove('pressed'); isMouseDown = false; }, { passive: false });
@@ -727,7 +837,6 @@ function updateMobileInput() {
   if (joystickDeltaX > dz) keys.d = true;
 }
 
-// ============ ОБНОВЛЕНИЕ ============
 function updatePlayer(delta) {
   if (!isGameActive) return;
   const speed = 7.5;
@@ -768,8 +877,7 @@ function updateEnemies(delta) {
   enemies.forEach(en => {
     const dir = new THREE.Vector3().subVectors(camera.position, en.position);
     dir.y = 0;
-    const dist = dir.length();
-    dir.normalize();
+    const dist = dir.length(); dir.normalize();
     const meleeRange = en.userData.isBoss ? 3 : 2;
     if (dist > meleeRange) {
       const np = en.position.clone().addScaledVector(dir, en.userData.speed * delta);
@@ -787,9 +895,7 @@ function updateEnemies(delta) {
       }
     } else {
       if (now > en.userData.nextShotTime) {
-        for (let k = 0; k < 5; k++) {
-          setTimeout(() => { if (currentBoss) enemyShoot(en); }, k * 100);
-        }
+        for (let k = 0; k < 5; k++) setTimeout(() => { if (currentBoss) enemyShoot(en); }, k * 100);
         if (Math.random() < 0.5) enemyThrowGrenade(en);
         en.userData.nextShotTime = now + 2000;
       }
@@ -825,16 +931,14 @@ function updateHUD() {
   const m = document.getElementById('medkits');
   if (s) s.textContent = `Ур.${currentLevel} ${lvl.name} | Волна ${wave}/${lvl.waves}`;
   if (h) h.textContent = '❤️ ' + Math.max(0, Math.floor(health));
-  if (a) a.textContent = reloading ? '🔄...' : '🔫 ' + w.name + ' ' + w.ammo + '/' + w.maxAmmo;
-  if (m) m.textContent = '🩹 x' + medkits;
+  if (a) a.innerHTML = `<svg class="ico-hud"><use href="#icon-${w.icon}"/></svg> ${reloading ? '...' : w.ammo + '/' + w.maxAmmo}`;
+  if (m) m.innerHTML = `<svg class="ico-hud"><use href="#icon-medkit"/></svg> x${medkits}`;
 }
 
 function updateCoinsDisplay() {
-  const els = ['menuCoins', 'mapCoins', 'shopCoins'];
-  els.forEach(id => { const el = document.getElementById(id); if (el) el.textContent = PROGRESS.coins; });
+  ['menuCoins', 'mapCoins', 'shopCoins'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = PROGRESS.coins; });
 }
 
-// ============ ВОЛНЫ / УРОВНИ ============
 function nextWave() {
   if (!isGameActive) return;
   const lvl = LEVELS[currentLevel];
@@ -843,10 +947,9 @@ function nextWave() {
     health = Math.min(100, health + 20);
     Object.keys(WEAPONS).forEach(k => WEAPONS[k].ammo = WEAPONS[k].maxAmmo);
     updateHUD();
-    showToast('🌊 Волна ' + wave);
+    showToast('Волна ' + wave);
   } else if (lvl.boss && !currentBoss) {
-    // Последняя волна — спавним БОССА
-    showToast('💀 БОСС!');
+    showToast('БОСС!');
     spawnEnemy(true);
   } else if (!lvl.boss) {
     completeLevel();
@@ -858,35 +961,23 @@ function completeLevel() {
   isGameActive = false;
   document.exitPointerLock();
   document.getElementById('hud').style.display = 'none';
-
-  // Расчёт звёзд
   let stars = 1;
   if (hitsTaken === 0) stars = 3;
   else if (hitsTaken === 1) stars = 2;
-
   const prevStars = PROGRESS.levels[currentLevel].stars;
   if (stars > prevStars) PROGRESS.levels[currentLevel].stars = stars;
   PROGRESS.levels[currentLevel].completed = true;
-
-  // Разблокировка следующего
   const nextLvl = currentLevel + 1;
   if (PROGRESS.levels[nextLvl]) PROGRESS.levels[nextLvl].unlocked = true;
-
-  // Монеты
   const earned = stars * 20;
   PROGRESS.coins += earned;
-
   saveProgress();
-
-  // Показ экрана
   document.getElementById('coinsEarned').textContent = earned;
-  const s1 = document.getElementById('star1'), s2 = document.getElementById('star2'), s3 = document.getElementById('star3');
-  s1.classList.remove('active'); s2.classList.remove('active'); s3.classList.remove('active');
-  setTimeout(() => s1.classList.add('active'), 300);
-  if (stars >= 2) setTimeout(() => s2.classList.add('active'), 800);
-  if (stars >= 3) setTimeout(() => s3.classList.add('active'), 1300);
+  ['star1', 'star2', 'star3'].forEach(id => document.getElementById(id).classList.remove('active'));
+  setTimeout(() => document.getElementById('star1').classList.add('active'), 300);
+  if (stars >= 2) setTimeout(() => document.getElementById('star2').classList.add('active'), 800);
+  if (stars >= 3) setTimeout(() => document.getElementById('star3').classList.add('active'), 1300);
   document.getElementById('levelComplete').style.display = 'flex';
-
   updateCoinsDisplay();
 }
 
@@ -898,40 +989,26 @@ function gameOver() {
   document.getElementById('gameover').style.display = 'flex';
 }
 
-// ============ ЗАПУСК УРОВНЯ ============
 function startLevel(levelNum) {
   currentLevel = levelNum;
   const lvl = LEVELS[levelNum];
-  wave = 1;
-  health = 100;
-  score = 0;
-  hitsTaken = 0;
-  medkits = 2;
-  playerY = 1.7;
-  verticalVelocity = 0;
-  isJumping = false;
-  lastShotTime = 0;
-  isMouseDown = false;
-  reloading = false;
-  currentBoss = null;
-
+  wave = 1; health = 100; score = 0; hitsTaken = 0; medkits = 2;
+  playerY = 1.7; verticalVelocity = 0; isJumping = false;
+  lastShotTime = 0; isMouseDown = false; reloading = false; currentBoss = null;
   Object.keys(WEAPONS).forEach(k => WEAPONS[k].ammo = WEAPONS[k].maxAmmo);
-
   enemies.forEach(e => scene.remove(e)); enemies = [];
   enemyBullets.forEach(b => scene.remove(b.mesh)); enemyBullets = [];
   grenades.forEach(g => scene.remove(g.mesh)); grenades = [];
   lootCrates.forEach(l => scene.remove(l)); lootCrates = [];
   currentBoss = null;
   document.getElementById('bossBar').style.display = 'none';
-
   camera.position.set(0, playerY, 0);
   yaw = 0; pitch = 0; recoilPitch = 0;
-
-  // Устанавливаем текущее оружие (первое доступное)
+  // Перестраиваем окружение
+  buildLevelEnvironment(levelNum);
   currentWeapon = 'rifle';
   if (!PROGRESS.ownedWeapons.includes('rifle')) currentWeapon = PROGRESS.ownedWeapons[0] || 'pistol';
   createWeapon(currentWeapon);
-
   document.getElementById('menu').style.display = 'none';
   document.getElementById('map').style.display = 'none';
   document.getElementById('shop').style.display = 'none';
@@ -940,90 +1017,33 @@ function startLevel(levelNum) {
   document.getElementById('gameover').style.display = 'none';
   document.getElementById('hud').style.display = 'block';
   document.getElementById('bgCanvas').style.display = 'none';
-
   isGameActive = true;
   updateHUD();
-
   if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
   if (window.startBackgroundMusic) window.startBackgroundMusic();
   if (!isMobile) setTimeout(() => { if (renderer.domElement.requestPointerLock) renderer.domElement.requestPointerLock(); }, 200);
-
-  // Начальный спавн
   for (let i = 0; i < 3; i++) setTimeout(() => spawnEnemy(), i * 500);
-
-  // Интервалы
   if (window._spawnInt) clearInterval(window._spawnInt);
   window._spawnInt = setInterval(() => spawnEnemy(), 1800);
   if (window._waveInt) clearInterval(window._waveInt);
   window._waveInt = setInterval(() => nextWave(), 25000);
 }
 
-// ============ UI (меню, карта, магазин) ============
 function setupUI() {
-  document.getElementById('playBtn').addEventListener('click', () => {
-    document.getElementById('menu').style.display = 'none';
-    document.getElementById('map').style.display = 'flex';
-    renderLevelGrid();
-    updateCoinsDisplay();
-  });
-  document.getElementById('backToMenu').addEventListener('click', () => {
-    document.getElementById('map').style.display = 'none';
-    document.getElementById('menu').style.display = 'flex';
-  });
-  document.getElementById('shopBtn').addEventListener('click', () => {
-    document.getElementById('menu').style.display = 'none';
-    document.getElementById('shop').style.display = 'flex';
-    renderShop('skins');
-    updateCoinsDisplay();
-  });
-  document.getElementById('backFromShop').addEventListener('click', () => {
-    document.getElementById('shop').style.display = 'none';
-    document.getElementById('menu').style.display = 'flex';
-  });
-  document.getElementById('settingsBtn').addEventListener('click', () => {
-    document.getElementById('menu').style.display = 'none';
-    document.getElementById('settings').style.display = 'flex';
-  });
-  document.getElementById('closeSettings').addEventListener('click', () => {
-    document.getElementById('settings').style.display = 'none';
-    document.getElementById('menu').style.display = 'flex';
-  });
-  document.getElementById('resetProgress').addEventListener('click', () => {
-    if (confirm('Сбросить весь прогресс?')) resetProgress();
-  });
-
-  document.getElementById('retryBtn').addEventListener('click', () => {
-    document.getElementById('gameover').style.display = 'none';
-    startLevel(currentLevel);
-  });
-  document.getElementById('toMapBtn2').addEventListener('click', () => {
-    document.getElementById('gameover').style.display = 'none';
-    document.getElementById('map').style.display = 'flex';
-    document.getElementById('bgCanvas').style.display = 'block';
-    renderLevelGrid();
-    updateCoinsDisplay();
-  });
-  document.getElementById('toMapBtn').addEventListener('click', () => {
-    document.getElementById('levelComplete').style.display = 'none';
-    document.getElementById('map').style.display = 'flex';
-    document.getElementById('bgCanvas').style.display = 'block';
-    renderLevelGrid();
-    updateCoinsDisplay();
-  });
-  document.getElementById('replayBtn').addEventListener('click', () => {
-    document.getElementById('levelComplete').style.display = 'none';
-    startLevel(currentLevel);
-  });
-
-  // Табы магазина
+  document.getElementById('playBtn').addEventListener('click', () => { document.getElementById('menu').style.display = 'none'; document.getElementById('map').style.display = 'flex'; renderLevelGrid(); updateCoinsDisplay(); });
+  document.getElementById('backToMenu').addEventListener('click', () => { document.getElementById('map').style.display = 'none'; document.getElementById('menu').style.display = 'flex'; });
+  document.getElementById('shopBtn').addEventListener('click', () => { document.getElementById('menu').style.display = 'none'; document.getElementById('shop').style.display = 'flex'; renderShop('skins'); updateCoinsDisplay(); });
+  document.getElementById('backFromShop').addEventListener('click', () => { document.getElementById('shop').style.display = 'none'; document.getElementById('menu').style.display = 'flex'; });
+  document.getElementById('settingsBtn').addEventListener('click', () => { document.getElementById('menu').style.display = 'none'; document.getElementById('settings').style.display = 'flex'; });
+  document.getElementById('closeSettings').addEventListener('click', () => { document.getElementById('settings').style.display = 'none'; document.getElementById('menu').style.display = 'flex'; });
+  document.getElementById('resetProgress').addEventListener('click', () => { if (confirm('Сбросить весь прогресс?')) resetProgress(); });
+  document.getElementById('retryBtn').addEventListener('click', () => { document.getElementById('gameover').style.display = 'none'; startLevel(currentLevel); });
+  document.getElementById('toMapBtn2').addEventListener('click', () => { document.getElementById('gameover').style.display = 'none'; document.getElementById('map').style.display = 'flex'; document.getElementById('bgCanvas').style.display = 'block'; renderLevelGrid(); updateCoinsDisplay(); });
+  document.getElementById('toMapBtn').addEventListener('click', () => { document.getElementById('levelComplete').style.display = 'none'; document.getElementById('map').style.display = 'flex'; document.getElementById('bgCanvas').style.display = 'block'; renderLevelGrid(); updateCoinsDisplay(); });
+  document.getElementById('replayBtn').addEventListener('click', () => { document.getElementById('levelComplete').style.display = 'none'; startLevel(currentLevel); });
   document.querySelectorAll('.shop-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      renderShop(tab.dataset.tab);
-    });
+    tab.addEventListener('click', () => { document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active')); tab.classList.add('active'); renderShop(tab.dataset.tab); });
   });
-
   setupSettings();
 }
 
@@ -1031,23 +1051,22 @@ function renderLevelGrid() {
   const grid = document.getElementById('levelGrid');
   if (!grid) return;
   grid.innerHTML = '';
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= 8; i++) {
     const lvl = LEVELS[i];
     const p = PROGRESS.levels[i];
     const card = document.createElement('div');
     card.className = 'level-card' + (p.unlocked ? '' : ' locked') + (lvl.boss ? ' boss-level' : '');
     let starsHTML = '';
-    for (let s = 1; s <= 3; s++) starsHTML += `<span class="${s <= p.stars ? '' : 's-off'}">⭐</span>`;
+    for (let s = 1; s <= 3; s++) starsHTML += `<svg class="${s <= p.stars ? '' : 'off'}"><use href="#icon-star"/></svg>`;
     card.innerHTML = `
       ${lvl.boss ? '<div class="boss-icon">💀</div>' : ''}
+      <div class="level-icon">${lvl.icon}</div>
       <div class="level-num">${i}</div>
       <div class="level-name">${lvl.name}</div>
       <div class="level-stars">${starsHTML}</div>
       ${!p.unlocked ? '<div class="lock-icon">🔒</div>' : ''}
     `;
-    if (p.unlocked) {
-      card.addEventListener('click', () => startLevel(i));
-    }
+    if (p.unlocked) card.addEventListener('click', () => startLevel(i));
     grid.appendChild(card);
   }
 }
@@ -1056,7 +1075,6 @@ function renderShop(tab) {
   const content = document.getElementById('shopContent');
   if (!content) return;
   content.innerHTML = '';
-
   if (tab === 'skins') {
     Object.keys(SKINS).forEach(key => {
       const s = SKINS[key];
@@ -1066,76 +1084,51 @@ function renderShop(tab) {
       item.className = 'shop-item' + (owned ? ' owned' : '') + (equipped ? ' equipped' : '');
       const colorHex = '#' + s.body.toString(16).padStart(6, '0');
       item.innerHTML = `
-        <div class="item-icon" style="filter: drop-shadow(0 0 15px ${colorHex});">👤</div>
+        <div class="item-icon" style="color:${colorHex};">👤</div>
         <div class="item-name">${s.name}</div>
         <div class="item-desc">Цвет: ${colorHex}</div>
-        <div class="item-price">${owned ? '✓ Куплено' : '💰 ' + s.cost}</div>
+        <div class="item-price">${owned ? '✓ Куплено' : '<svg class="ico-sm"><use href="#icon-coin"/></svg> ' + s.cost}</div>
         <button class="item-btn ${equipped ? 'equipped-btn' : ''}" data-type="skin" data-key="${key}">
           ${equipped ? '✓ НАДЕТО' : (owned ? 'НАДЕТЬ' : 'КУПИТЬ')}
-        </button>
-      `;
+        </button>`;
       content.appendChild(item);
     });
   } else {
     Object.keys(WEAPONS).forEach(key => {
       const w = WEAPONS[key];
-      if (!w.cost) return; // Базовые не продаются
+      if (!w.cost) return;
       const owned = PROGRESS.ownedWeapons.includes(key);
       const item = document.createElement('div');
       item.className = 'shop-item' + (owned ? ' owned' : '');
       item.innerHTML = `
-        <div class="item-icon">🔫</div>
+        <svg class="item-icon" style="fill:#fff;"><use href="#icon-${w.icon}"/></svg>
         <div class="item-name">${w.name}</div>
         <div class="item-desc">Урон: ${w.damage} · Обойма: ${w.maxAmmo}</div>
-        <div class="item-price">${owned ? '✓ Куплено' : '💰 ' + w.cost}</div>
-        <button class="item-btn" data-type="weapon" data-key="${key}">${owned ? '✓ КУПЛЕНО' : 'КУПИТЬ'}</button>
-      `;
+        <div class="item-price">${owned ? '✓ Куплено' : '<svg class="ico-sm"><use href="#icon-coin"/></svg> ' + w.cost}</div>
+        <button class="item-btn" data-type="weapon" data-key="${key}">${owned ? '✓ КУПЛЕНО' : 'КУПИТЬ'}</button>`;
       content.appendChild(item);
     });
   }
-
-  // Обработчики кнопок покупки
   content.querySelectorAll('.item-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const type = btn.dataset.type;
-      const key = btn.dataset.key;
+      const type = btn.dataset.type, key = btn.dataset.key;
       if (type === 'skin') {
         const s = SKINS[key];
         const owned = PROGRESS.ownedSkins.includes(key);
-        if (owned) {
-          PROGRESS.currentSkin = key;
-          showToast('Надет: ' + s.name);
-        } else if (PROGRESS.coins >= s.cost) {
-          PROGRESS.coins -= s.cost;
-          PROGRESS.ownedSkins.push(key);
-          PROGRESS.currentSkin = key;
-          showToast('Куплено: ' + s.name);
-        } else {
-          showToast('Недостаточно монет!');
-          return;
-        }
-        saveProgress();
-        updateCoinsDisplay();
-        renderShop('skins');
+        if (owned) { PROGRESS.currentSkin = key; showToast('Надет: ' + s.name); }
+        else if (PROGRESS.coins >= s.cost) { PROGRESS.coins -= s.cost; PROGRESS.ownedSkins.push(key); PROGRESS.currentSkin = key; showToast('Куплено: ' + s.name); }
+        else { showToast('Недостаточно монет!'); return; }
+        saveProgress(); updateCoinsDisplay(); renderShop('skins');
       } else {
         const w = WEAPONS[key];
         if (PROGRESS.ownedWeapons.includes(key)) return;
-        if (PROGRESS.coins >= w.cost) {
-          PROGRESS.coins -= w.cost;
-          PROGRESS.ownedWeapons.push(key);
-          showToast('Куплено: ' + w.name);
-          saveProgress();
-          updateCoinsDisplay();
-          renderShop('weapons');
-        } else {
-          showToast('Недостаточно монет!');
-        }
+        if (PROGRESS.coins >= w.cost) { PROGRESS.coins -= w.cost; PROGRESS.ownedWeapons.push(key); showToast('Куплено: ' + w.name); saveProgress(); updateCoinsDisplay(); renderShop('weapons'); }
+        else { showToast('Недостаточно монет!'); }
       }
     });
   });
 }
 
-// ============ DEBUG ============
 function createDebugPanel() {
   const p = document.createElement('div');
   p.id = 'debugPanel';
@@ -1147,13 +1140,10 @@ function updateDebugPanel() {
   if (!p) return;
   if (!debugMode) { p.style.display = 'none'; return; }
   p.style.display = 'block';
-  const now = performance.now();
   const w = WEAPONS[currentWeapon];
-  const cd = Math.max(0, w.cooldown - (now - lastShotTime));
-  p.textContent = `🎮 DEBUG\nlevel: ${currentLevel} wave: ${wave}\nenemies: ${enemies.length}\nbullets: ${enemyBullets.length}\ngrenades: ${grenades.length}\nweapon: ${w.name}\nammo: ${w.ammo}/${w.maxAmmo}\nhits: ${hitsTaken}\ncoins: ${PROGRESS.coins}`;
+  p.textContent = `DEBUG\nlevel: ${currentLevel} ${LEVELS[currentLevel].name}\nwave: ${wave}/${LEVELS[currentLevel].waves}\nenemies: ${enemies.length}\nbullets: ${enemyBullets.length}\nweapon: ${w.name}\nammo: ${w.ammo}/${w.maxAmmo}\nhits: ${hitsTaken}\ncoins: ${PROGRESS.coins}`;
 }
 
-// ============ НАСТРОЙКИ ============
 function setupSettings() {
   const sens = document.getElementById('sensSlider');
   const vol = document.getElementById('volSlider');
@@ -1171,9 +1161,8 @@ function setupSettings() {
   if (fovS) fovS.addEventListener('input', () => { camera.fov = parseInt(fovS.value); camera.updateProjectionMatrix(); });
 }
 
-// ============ СТАРТ ============
 window.addEventListener('load', () => {
   init();
   createDebugPanel();
-  console.log('🎮 ZOMBIESHOOT v10.0 запущен');
+  console.log('ZOMBIESHOOT v11.0 запущен. 8 уровней, новые локации.');
 });

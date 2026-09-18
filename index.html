@@ -7,46 +7,58 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
 <canvas id="bgCanvas"></canvas>
 
+<!-- ГЛАВНОЕ МЕНЮ -->
 <div id="menu" class="screen">
   <div class="menu-box">
-    <img src="skull.png" alt="ZOMBIESHOOT" class="skull-img">
+    <img src="skull.png" class="skull-img">
     <h1 class="game-title">ZOMBIE<span class="red">SHOOT</span></h1>
     <p class="tagline">ВЫЖИВИ В ЗОНЕ ЗАРАЖЕНИЯ</p>
-    <div class="version">v9.0 · MOBILE</div>
-    <button id="startBtn" class="btn-primary">▶ ИГРАТЬ</button>
+    <div class="version">v10.0 · LEVELS</div>
+    <div class="coins-display">💰 <span id="menuCoins">0</span></div>
+    <button id="playBtn" class="btn-primary">▶ ИГРАТЬ</button>
+    <button id="shopBtn" class="btn-secondary">🛒 МАГАЗИН</button>
     <button id="settingsBtn" class="btn-secondary">⚙ НАСТРОЙКИ</button>
   </div>
 </div>
 
+<!-- КАРТА УРОВНЕЙ -->
+<div id="map" class="screen" style="display:none;">
+  <div class="wide-box">
+    <div class="top-bar">
+      <button id="backToMenu" class="btn-back">←</button>
+      <h2>КАРТА УРОВНЕЙ</h2>
+      <div class="coins-display">💰 <span id="mapCoins">0</span></div>
+    </div>
+    <div id="levelGrid" class="level-grid"></div>
+  </div>
+</div>
+
+<!-- МАГАЗИН -->
+<div id="shop" class="screen" style="display:none;">
+  <div class="wide-box">
+    <div class="top-bar">
+      <button id="backFromShop" class="btn-back">←</button>
+      <h2>🛒 МАГАЗИН</h2>
+      <div class="coins-display">💰 <span id="shopCoins">0</span></div>
+    </div>
+    <div class="shop-tabs">
+      <button class="shop-tab active" data-tab="skins">👤 Скины</button>
+      <button class="shop-tab" data-tab="weapons">🔫 Оружие</button>
+    </div>
+    <div id="shopContent" class="shop-grid"></div>
+  </div>
+</div>
+
+<!-- НАСТРОЙКИ -->
 <div id="settings" class="screen" style="display:none;">
   <div class="settings-box">
     <h2>⚙ НАСТРОЙКИ</h2>
-
-    <div class="settings-block">
-      <h3>УПРАВЛЕНИЕ</h3>
-      <div class="ctrl-grid">
-        <div><kbd>W A S D</kbd><span>Движение</span></div>
-        <div><kbd>МЫШЬ</kbd><span>Обзор</span></div>
-        <div><kbd>ЛКМ</kbd><span>Выстрел</span></div>
-        <div><kbd>SPACE</kbd><span>Прыжок</span></div>
-        <div><kbd>R</kbd><span>Перезарядка</span></div>
-        <div><kbd>1 2 3</kbd><span>Оружие</span></div>
-        <div><kbd>4</kbd><span>Аптечка</span></div>
-        <div><kbd>F</kbd><span>Лут</span></div>
-      </div>
-    </div>
-
     <div class="settings-block">
       <h3>ГРАФИКА И ЗВУК</h3>
-      <label>Чувствительность
-        <input type="range" id="sensSlider" min="1" max="20" value="5">
-      </label>
-      <label>Громкость
-        <input type="range" id="volSlider" min="0" max="100" value="40">
-      </label>
+      <label>Чувствительность <input type="range" id="sensSlider" min="1" max="20" value="5"></label>
+      <label>Громкость <input type="range" id="volSlider" min="0" max="100" value="40"></label>
       <label>Качество
         <select id="qualitySelect">
           <option value="high">Высокое</option>
@@ -54,50 +66,41 @@
           <option value="low">Низкое</option>
         </select>
       </label>
-      <label>FOV (обзор)
-        <input type="range" id="fovSlider" min="60" max="100" value="75">
-      </label>
+      <label>FOV <input type="range" id="fovSlider" min="60" max="100" value="75"></label>
     </div>
-
     <div class="settings-block">
       <h3>ПРОЧЕЕ</h3>
-      <label class="toggle-label">
-        <input type="checkbox" id="debugToggle">
-        <span>Отладочная панель</span>
-      </label>
+      <label class="toggle-label"><input type="checkbox" id="debugToggle"><span>Отладка</span></label>
+      <button id="resetProgress" class="btn-danger">🗑 Сбросить прогресс</button>
     </div>
-
     <div class="settings-block support-block">
       <h3>ПОДДЕРЖКА</h3>
-      <p class="support-text">Нашли баг или есть идея?</p>
-      <a href="mailto:nemo94314@gmail.com?subject=ZOMBIESHOOT%20—%20Обратная%20связь" class="btn-support">
-        ✉ НАПИСАТЬ НА ПОЧТУ
-      </a>
+      <a href="mailto:nemo94314@gmail.com?subject=ZOMBIESHOOT" class="btn-support">✉ ПОЧТА</a>
       <p class="support-email">nemo94314@gmail.com</p>
     </div>
-
     <button id="closeSettings" class="btn-primary">← НАЗАД</button>
   </div>
 </div>
 
+<!-- HUD -->
 <div id="hud" style="display:none;">
-  <div id="score">Счёт: 0 | Волна: 1</div>
+  <div id="score">Ур.1 | Волна: 1/1</div>
   <div id="health">❤️ 100</div>
-  <div id="ammo">🔫 30 / 30</div>
+  <div id="ammo">🔫 30/30</div>
   <div id="medkits">🩹 x2</div>
   <div id="crosshair">+</div>
   <div id="interactPrompt">[F] Подобрать</div>
+  <div id="bossBar" style="display:none;">
+    <div id="bossName">💀 БОСС</div>
+    <div id="bossHealthBar"><div id="bossHealthFill"></div></div>
+  </div>
   <div id="damageVignette"></div>
   <div id="hitMarker">✖</div>
 </div>
 
+<!-- МОБИЛЬНОЕ УПРАВЛЕНИЕ -->
 <div id="mobileControls">
-  <div id="joystickZone">
-    <div id="joystickBase">
-      <div id="joystickKnob"></div>
-    </div>
-  </div>
-
+  <div id="joystickZone"><div id="joystickBase"><div id="joystickKnob"></div></div></div>
   <div id="actionButtons">
     <button class="mob-btn weapon" id="btnWeapon">🔫</button>
     <button class="mob-btn medkit" id="btnMedkit">🩹</button>
@@ -108,13 +111,29 @@
   </div>
 </div>
 
+<!-- УРОВЕНЬ ПРОЙДЕН -->
+<div id="levelComplete" class="screen" style="display:none;">
+  <div class="complete-box">
+    <h1>УРОВЕНЬ ПРОЙДЕН!</h1>
+    <div class="star-display">
+      <span class="star" id="star1">⭐</span>
+      <span class="star" id="star2">⭐</span>
+      <span class="star" id="star3">⭐</span>
+    </div>
+    <p class="complete-stats">Получено: <b id="coinsEarned">0</b> 💰</p>
+    <button id="toMapBtn" class="btn-primary">К КАРТЕ</button>
+    <button id="replayBtn" class="btn-secondary">🔄 ЕЩЁ РАЗ</button>
+  </div>
+</div>
+
+<!-- GAME OVER -->
 <div id="gameover" class="screen" style="display:none;">
   <div class="menu-box">
-    <img src="skull.png" alt="ZOMBIESHOOT" class="skull-img small">
+    <img src="skull.png" class="skull-img small">
     <h1 class="death-title">ТЫ ПОГИБ</h1>
-    <p class="final-score-label">ТВОЙ РЕЗУЛЬТАТ</p>
-    <p class="final-score-value"><span id="finalScore">0</span></p>
-    <button id="restartBtn" class="btn-primary">🔄 ЗАНОВО</button>
+    <p class="final-score-label">УРОВЕНЬ <span id="deadLevel">1</span></p>
+    <button id="retryBtn" class="btn-primary">🔄 ЕЩЁ РАЗ</button>
+    <button id="toMapBtn2" class="btn-secondary">К КАРТЕ</button>
   </div>
 </div>
 
@@ -125,60 +144,41 @@ const bg = document.getElementById('bgCanvas');
 const bctx = bg.getContext('2d');
 function resizeBg(){ bg.width = innerWidth; bg.height = innerHeight; }
 resizeBg(); addEventListener('resize', resizeBg);
-
 const pts = Array.from({length: 80}, () => ({
   x: Math.random() * bg.width, y: Math.random() * bg.height,
   vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
   r: Math.random() * 2 + 0.5, a: Math.random() * 0.5 + 0.15
 }));
-
 function drawBG(){
-  bctx.fillStyle = '#000';
-  bctx.fillRect(0, 0, bg.width, bg.height);
+  bctx.fillStyle = '#000'; bctx.fillRect(0, 0, bg.width, bg.height);
   const g = bctx.createRadialGradient(bg.width/2, bg.height/2, 100, bg.width/2, bg.height/2, Math.max(bg.width, bg.height)/1.5);
-  g.addColorStop(0, 'rgba(60,0,0,0.15)');
-  g.addColorStop(1, 'rgba(0,0,0,0.9)');
-  bctx.fillStyle = g;
-  bctx.fillRect(0, 0, bg.width, bg.height);
-
+  g.addColorStop(0, 'rgba(60,0,0,0.15)'); g.addColorStop(1, 'rgba(0,0,0,0.9)');
+  bctx.fillStyle = g; bctx.fillRect(0, 0, bg.width, bg.height);
   pts.forEach(p => {
     p.x += p.vx; p.y += p.vy;
     if (p.x < 0 || p.x > bg.width) p.vx *= -1;
     if (p.y < 0 || p.y > bg.height) p.vy *= -1;
-    bctx.beginPath();
-    bctx.arc(p.x, p.y, p.r, 0, 6.28);
+    bctx.beginPath(); bctx.arc(p.x, p.y, p.r, 0, 6.28);
     bctx.fillStyle = `rgba(220,40,40,${p.a})`;
-    bctx.shadowColor = '#ff0033';
-    bctx.shadowBlur = 10;
-    bctx.fill();
-    bctx.shadowBlur = 0;
+    bctx.shadowColor = '#ff0033'; bctx.shadowBlur = 10;
+    bctx.fill(); bctx.shadowBlur = 0;
   });
   requestAnimationFrame(drawBG);
 }
 drawBG();
 
 let musicCtx = null, musicPlaying = false, musicVolume = 0.3;
-
 function startMusic(){
   if (musicPlaying) return;
-  try {
-    musicCtx = new (window.AudioContext || window.webkitAudioContext)();
-    musicPlaying = true;
-    playAmbientMusic();
-  } catch(e){}
+  try { musicCtx = new (window.AudioContext || window.webkitAudioContext)(); musicPlaying = true; playAmbientMusic(); } catch(e){}
 }
-
 function playAmbientMusic(){
   if (!musicCtx || musicCtx.state === 'closed') return;
   const now = musicCtx.currentTime;
   [110, 164.81, 220].forEach((freq, i) => {
-    const osc = musicCtx.createOscillator();
-    const gain = musicCtx.createGain();
-    const filter = musicCtx.createBiquadFilter();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, now);
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(500, now);
+    const osc = musicCtx.createOscillator(), gain = musicCtx.createGain(), filter = musicCtx.createBiquadFilter();
+    osc.type = 'sine'; osc.frequency.setValueAtTime(freq, now);
+    filter.type = 'lowpass'; filter.frequency.setValueAtTime(500, now);
     gain.gain.setValueAtTime(0, now);
     gain.gain.linearRampToValueAtTime(0.04 * musicVolume, now + 2);
     gain.gain.linearRampToValueAtTime(0, now + 6);
@@ -187,19 +187,13 @@ function playAmbientMusic(){
   });
   setTimeout(() => { if (musicPlaying) playAmbientMusic(); }, 6500);
 }
-
 function stopMusic(){
   musicPlaying = false;
   if (musicCtx) { try { musicCtx.close(); } catch(e){} musicCtx = null; }
 }
-
 window.stopBackgroundMusic = stopMusic;
 window.startBackgroundMusic = startMusic;
 window.setMusicVolume = (v) => { musicVolume = Math.max(0, Math.min(1, v)); };
-
-document.getElementById('startBtn').addEventListener('click', () => {
-  if (!musicPlaying) startMusic();
-});
 </script>
 </body>
 </html>

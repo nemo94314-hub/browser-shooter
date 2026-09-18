@@ -1,7 +1,7 @@
 
 ---
 
-## 🚀 Запуск ![Uploading image.png…]()
+## 🚀 Запуск https://nemo94314-hub.github.io/browser-shooter/
 
 
 1. Скачай все файлы в одну папку.

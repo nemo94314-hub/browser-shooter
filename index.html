@@ -31,11 +31,9 @@
     <path d="M4 28 L4 24 L52 24 L52 20 L58 20 L58 32 L52 32 L52 28 L30 28 L30 42 L26 42 L26 28 Z" fill="currentColor" stroke="#000" stroke-width="1"/>
     <rect x="10" y="30" width="18" height="4" fill="#5a3a1a"/>
     <rect x="26" y="30" width="8" height="12" rx="1" fill="#222"/>
-    <rect x="38" y="20" width="10" height="4" fill="#333"/>
   </symbol>
   <symbol id="icon-sniper" viewBox="0 0 64 64">
     <path d="M2 30 L2 26 L52 26 L52 22 L58 22 L58 34 L52 34 L52 30 L28 30 L28 44 L24 44 L24 30 Z" fill="currentColor" stroke="#000" stroke-width="1"/>
-    <rect x="24" y="34" width="8" height="14" rx="1" fill="#222"/>
     <rect x="14" y="18" width="24" height="6" rx="2" fill="#1a1a1a" stroke="#333"/>
     <circle cx="26" cy="21" r="2" fill="#00d4ff"/>
   </symbol>
@@ -46,14 +44,10 @@
   <symbol id="icon-flame" viewBox="0 0 64 64">
     <rect x="4" y="26" width="40" height="10" fill="#cc6600" stroke="#000" stroke-width="1"/>
     <rect x="42" y="22" width="16" height="18" fill="#888" stroke="#000" stroke-width="1"/>
-    <rect x="8" y="36" width="10" height="8" fill="#222"/>
-    <rect x="22" y="36" width="10" height="8" fill="#222"/>
     <circle cx="58" cy="31" r="4" fill="#ff6600" opacity="0.8"/>
-    <circle cx="58" cy="31" r="2" fill="#ffcc00"/>
   </symbol>
   <symbol id="icon-medkit" viewBox="0 0 64 64">
     <rect x="8" y="20" width="48" height="32" rx="4" fill="#f0f0f0" stroke="#000" stroke-width="2"/>
-    <rect x="24" y="14" width="16" height="8" rx="2" fill="#f0f0f0" stroke="#000" stroke-width="2"/>
     <rect x="28" y="26" width="8" height="20" fill="#ff0000"/>
     <rect x="18" y="32" width="28" height="8" fill="#ff0000"/>
   </symbol>
@@ -63,7 +57,6 @@
   </symbol>
   <symbol id="icon-jump" viewBox="0 0 64 64">
     <path d="M32 8 L44 24 L36 24 L36 44 L28 44 L28 24 L20 24 Z" fill="#00aaff" stroke="#000" stroke-width="1.5"/>
-    <rect x="16" y="50" width="32" height="6" rx="2" fill="#00aaff" opacity="0.5"/>
   </symbol>
   <symbol id="icon-pickup" viewBox="0 0 64 64">
     <path d="M20 30 L20 18 L26 18 L26 22 L30 22 L30 12 L36 12 L36 22 L40 22 L40 18 L46 18 L46 30 L42 30 L42 46 L24 46 L24 30 Z" fill="#ffdd00" stroke="#000" stroke-width="1.5"/>
@@ -72,20 +65,15 @@
     <circle cx="32" cy="32" r="22" fill="#ff0033" stroke="#000" stroke-width="2"/>
     <circle cx="32" cy="32" r="14" fill="#8a0000"/>
     <circle cx="32" cy="32" r="6" fill="#fff"/>
-    <path d="M32 6 L36 18 L28 18 Z" fill="#ffcc00"/>
-    <path d="M32 58 L28 46 L36 46 Z" fill="#ffcc00"/>
   </symbol>
   <symbol id="icon-weapon-switch" viewBox="0 0 64 64">
     <path d="M12 30 L12 26 L44 26 L44 22 L48 22 L48 26 L56 26 L56 30 L48 30 L48 34 L44 34 L44 30 L28 30 L28 42 L24 42 L24 30 Z" fill="#ffaa00" stroke="#000" stroke-width="1.5"/>
-    <path d="M6 46 L14 42 L14 50 Z" fill="#ffaa00"/>
-    <path d="M58 46 L50 42 L50 50 Z" fill="#ffaa00"/>
   </symbol>
   <symbol id="icon-star" viewBox="0 0 64 64">
     <polygon points="32,6 40,24 60,26 45,40 50,58 32,48 14,58 19,40 4,26 24,24" fill="#ffcc00" stroke="#8a6500" stroke-width="2"/>
   </symbol>
   <symbol id="icon-coin" viewBox="0 0 64 64">
     <circle cx="32" cy="32" r="26" fill="#ffcc00" stroke="#8a6500" stroke-width="3"/>
-    <circle cx="32" cy="32" r="20" fill="#ffdd44" stroke="#aa8800" stroke-width="2"/>
     <text x="32" y="42" text-anchor="middle" font-size="24" font-weight="900" fill="#8a6500" font-family="Arial">$</text>
   </symbol>
   <symbol id="icon-skull" viewBox="0 0 64 64">
@@ -93,9 +81,6 @@
     <ellipse cx="24" cy="28" rx="6" ry="8" fill="#0a0a0a"/>
     <ellipse cx="40" cy="28" rx="6" ry="8" fill="#0a0a0a"/>
     <polygon points="32,38 29,46 35,46" fill="#0a0a0a"/>
-    <rect x="24" y="46" width="4" height="8" fill="#0a0a0a"/>
-    <rect x="30" y="46" width="4" height="8" fill="#0a0a0a"/>
-    <rect x="36" y="46" width="4" height="8" fill="#0a0a0a"/>
   </symbol>
 </svg>
 
@@ -105,12 +90,50 @@
     <img src="skull.png" class="skull-img" alt="ZOMBIESHOOT">
     <h1 class="game-title">ZOMBIE<span class="red">SHOOT</span></h1>
     <p class="tagline">ВЫЖИВИ В ЗОНЕ ЗАРАЖЕНИЯ</p>
-    <div class="version">v12.0 · HORROR</div>
+    <div class="version">v15.0 · MULTIPLAYER</div>
     <div class="coins-display"><svg class="ico-sm"><use href="#icon-coin"/></svg> <span id="menuCoins">0</span></div>
     <button id="playBtn" class="btn-primary">ИГРАТЬ</button>
     <button id="survivalBtn" class="btn-primary" style="background:linear-gradient(135deg,#4a0000,#8a0000);border-color:#8a0000;">ВЫЖИВАНИЕ</button>
+    <button id="multiplayerBtn" class="btn-primary" style="background:linear-gradient(135deg,#004a8a,#0088ff);border-color:#0088ff;">МУЛЬТИПЛЕЕР</button>
     <button id="shopBtn" class="btn-secondary"><svg class="ico-sm"><use href="#icon-weapon-switch"/></svg> МАГАЗИН</button>
     <button id="settingsBtn" class="btn-secondary">НАСТРОЙКИ</button>
+  </div>
+</div>
+
+<!-- ЭКРАН МУЛЬТИПЛЕЕРА -->
+<div id="multiplayerMenu" class="screen" style="display:none;">
+  <div class="wide-box">
+    <div class="top-bar">
+      <button id="backFromMultiplayer" class="btn-back">←</button>
+      <h2>МУЛЬТИПЛЕЕР</h2>
+      <div class="coins-display"><svg class="ico-sm"><use href="#icon-coin"/></svg> <span id="mpCoins">0</span></div>
+    </div>
+
+    <div style="text-align:center;margin-bottom:20px;">
+      <p style="color:#aaa;font-family:'Courier New',monospace;font-size:13px;letter-spacing:2px;">
+        ИГРАЙ С ДРУЗЬЯМИ В ОДНОЙ КОМНАТЕ
+      </p>
+    </div>
+
+    <div class="mp-section">
+      <h3 style="color:#00d4ff;font-family:'Courier New',monospace;letter-spacing:3px;margin-bottom:15px;">СОЗДАТЬ КОМНАТУ</h3>
+      <button id="createRoomBtn" class="btn-primary">СОЗДАТЬ НОВУЮ КОМНАТУ</button>
+    </div>
+
+    <div class="mp-section">
+      <h3 style="color:#00d4ff;font-family:'Courier New',monospace;letter-spacing:3px;margin-bottom:15px;">ВОЙТИ В КОМНАТУ</h3>
+      <input type="text" id="roomCodeInput" placeholder="КОД" maxlength="6" style="padding:12px;font-size:24px;text-align:center;letter-spacing:6px;text-transform:uppercase;background:#0a0a0a;color:#00d4ff;border:2px solid #00d4ff;border-radius:6px;width:220px;font-family:'Courier New',monospace;margin-bottom:15px;display:block;margin-left:auto;margin-right:auto;">
+      <button id="joinRoomBtn" class="btn-primary">ВОЙТИ</button>
+    </div>
+
+    <div id="roomInfo" style="display:none;text-align:center;margin-top:20px;">
+      <p style="color:#00d4ff;font-family:'Courier New',monospace;font-size:14px;margin-bottom:10px;">КОД КОМНАТЫ:</p>
+      <p id="roomCodeDisplay" style="color:#ffcc00;font-size:42px;font-weight:900;letter-spacing:10px;font-family:'Courier New',monospace;margin:10px 0;">------</p>
+      <p style="color:#888;font-size:12px;margin:10px 0;">Отправь этот код другу</p>
+      <p style="color:#aaa;font-size:13px;">Игроков в комнате: <b id="playerCount" style="color:#00d4ff;">1</b></p>
+      <button id="startMPBtn" class="btn-primary" style="margin-top:15px;">НАЧАТЬ ИГРУ</button>
+      <button id="leaveRoomBtn" class="btn-secondary" style="margin-top:10px;">ВЫЙТИ ИЗ КОМНАТЫ</button>
+    </div>
   </div>
 </div>
 
@@ -191,11 +214,8 @@
       <h3>РЕЖИМ ИГРЫ</h3>
       <label class="toggle-label">
         <input type="checkbox" id="horrorToggle" checked>
-        <span>Хоррор-режим (темно, туман, фонарик)</span>
+        <span>Хоррор-режим</span>
       </label>
-      <p style="font-size:10px;color:#666;font-family:'Courier New',monospace;margin-top:-8px;margin-bottom:10px;">
-        Выключи, чтобы играть в светлом режиме
-      </p>
     </div>
 
     <div class="settings-block">
@@ -272,7 +292,7 @@
 <!-- Three.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-<!-- EffectComposer для хоррор-эффектов -->
+<!-- EffectComposer -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
@@ -280,23 +300,44 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/FilmShader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/VignetteShader.js"></script>
 
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+
+<!-- Firebase Config -->
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCBvDWQ-VnO0GhWpgbc3YlJmj-ARz4rG8c",
+    authDomain: "zombieshoot-40dc6.firebaseapp.com",
+    databaseURL: "https://zombieshoot-40dc6-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "zombieshoot-40dc6",
+    storageBucket: "zombieshoot-40dc6.firebasestorage.app",
+    messagingSenderId: "1068057978295",
+    appId: "1:1068057978295:web:2787bfbcc154ddab997432"
+  };
+  firebase.initializeApp(firebaseConfig);
+  window.firebaseDB = firebase.database();
+  console.log('✅ Firebase подключён:', firebaseConfig.projectId);
+</script>
+
+<!-- Multiplayer -->
+<script src="multiplayer.js"></script>
+
 <!-- Игра -->
 <script src="game.js"></script>
 
 <!-- Фон меню + музыка + PWA -->
 <script>
-// Фоновые частицы для меню
 const bg = document.getElementById('bgCanvas');
 const bctx = bg.getContext('2d');
 function resizeBg(){ bg.width = innerWidth; bg.height = innerHeight; }
 resizeBg(); addEventListener('resize', resizeBg);
-
 const pts = Array.from({length: 80}, () => ({
   x: Math.random() * bg.width, y: Math.random() * bg.height,
   vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
   r: Math.random() * 2 + 0.5, a: Math.random() * 0.5 + 0.15
 }));
-
 function drawBG(){
   bctx.fillStyle = '#000'; bctx.fillRect(0, 0, bg.width, bg.height);
   const g = bctx.createRadialGradient(bg.width/2, bg.height/2, 100, bg.width/2, bg.height/2, Math.max(bg.width, bg.height)/1.5);
@@ -315,7 +356,6 @@ function drawBG(){
 }
 drawBG();
 
-// Фоновая музыка (синтез)
 let musicCtx = null, musicPlaying = false, musicVolume = 0.3;
 function startMusic(){ if (musicPlaying) return; try { musicCtx = new (window.AudioContext || window.webkitAudioContext)(); musicPlaying = true; playAmbientMusic(); } catch(e){} }
 function playAmbientMusic(){
@@ -338,7 +378,6 @@ window.stopBackgroundMusic = stopMusic;
 window.startBackgroundMusic = startMusic;
 window.setMusicVolume = (v) => { musicVolume = Math.max(0, Math.min(1, v)); };
 
-// PWA — регистрация Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error:', err));

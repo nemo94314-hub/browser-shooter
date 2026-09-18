@@ -16,7 +16,7 @@
     <img src="skull.png" alt="ZOMBIESHOOT" class="skull-img">
     <h1 class="game-title">ZOMBIE<span class="red">SHOOT</span></h1>
     <p class="tagline">ВЫЖИВИ В ЗОНЕ ЗАРАЖЕНИЯ</p>
-    <div class="version">v8.0 · ALPHA</div>
+    <div class="version">v8.1 · ALPHA</div>
     <button id="startBtn" class="btn-primary">▶ ИГРАТЬ</button>
     <button id="settingsBtn" class="btn-secondary">⚙ НАСТРОЙКИ</button>
   </div>
@@ -88,7 +88,7 @@
   <div id="crosshair">+</div>
   <div id="interactPrompt">[F] Подобрать</div>
   <div id="damageVignette"></div>
-  <div id="hitMarker"></div>
+  <div id="hitMarker">✖</div>
 </div>
 
 <!-- ЭКРАН СМЕРТИ -->
@@ -105,22 +105,30 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="game.js"></script>
 <script>
-// ========== ФОН МЕНЮ ==========
+// ========== ФОН МЕНЮ (чёрный с частицами) ==========
 const bg = document.getElementById('bgCanvas');
 const bctx = bg.getContext('2d');
 function resizeBg(){ bg.width = innerWidth; bg.height = innerHeight; }
-resizeBg(); addEventListener('resize', resizeBg);
+resizeBg();
+addEventListener('resize', resizeBg);
 
-const pts = Array.from({length: 120}, () => ({
-  x: Math.random() * bg.width, y: Math.random() * bg.height,
-  vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
-  r: Math.random() * 2 + 0.5, a: Math.random() * 0.5 + 0.15
+const pts = Array.from({length: 100}, () => ({
+  x: Math.random() * bg.width,
+  y: Math.random() * bg.height,
+  vx: (Math.random() - 0.5) * 0.4,
+  vy: (Math.random() - 0.5) * 0.4,
+  r: Math.random() * 2 + 0.5,
+  a: Math.random() * 0.5 + 0.15
 }));
 
 function drawBG(){
   bctx.fillStyle = '#000';
   bctx.fillRect(0, 0, bg.width, bg.height);
-  const g = bctx.createRadialGradient(bg.width/2, bg.height/2, 100, bg.width/2, bg.height/2, Math.max(bg.width, bg.height)/1.5);
+
+  const g = bctx.createRadialGradient(
+    bg.width / 2, bg.height / 2, 100,
+    bg.width / 2, bg.height / 2, Math.max(bg.width, bg.height) / 1.5
+  );
   g.addColorStop(0, 'rgba(60,0,0,0.15)');
   g.addColorStop(1, 'rgba(0,0,0,0.9)');
   bctx.fillStyle = g;
@@ -130,6 +138,7 @@ function drawBG(){
     p.x += p.vx; p.y += p.vy;
     if (p.x < 0 || p.x > bg.width) p.vx *= -1;
     if (p.y < 0 || p.y > bg.height) p.vy *= -1;
+
     bctx.beginPath();
     bctx.arc(p.x, p.y, p.r, 0, 6.28);
     bctx.fillStyle = `rgba(220,40,40,${p.a})`;
@@ -138,15 +147,16 @@ function drawBG(){
     bctx.fill();
     bctx.shadowBlur = 0;
   });
+
   requestAnimationFrame(drawBG);
 }
 drawBG();
 
-// ========== ТИХАЯ ФОНОВАЯ МУЗЫКА ==========
+// ========== МЯГКАЯ ФОНОВАЯ МУЗЫКА (без шума) ==========
 let musicCtx = null;
 let musicNodes = [];
 let musicPlaying = false;
-let musicVolume = 0.15;
+let musicVolume = 0.3;
 
 function startMusic(){
   if (musicPlaying) return;
@@ -161,54 +171,53 @@ function playAmbientMusic(){
   if (!musicCtx || musicCtx.state === 'closed') return;
   const now = musicCtx.currentTime;
 
-  // Мягкий пад (аккорд из 3 нот)
+  // Мягкий аккорд из 3 нот (все sine — без шума)
   const notes = [110, 164.81, 220]; // A2, E3, A3
   notes.forEach((freq, i) => {
     const osc = musicCtx.createOscillator();
     const gain = musicCtx.createGain();
     const filter = musicCtx.createBiquadFilter();
 
-    osc.type = 'sine'; // мягкий, без шума
+    osc.type = 'sine';
     osc.frequency.setValueAtTime(freq, now);
 
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(600, now);
+    filter.frequency.setValueAtTime(500, now);
     filter.Q.setValueAtTime(0.5, now);
 
-    // Плавное появление и затухание
     gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.04 * musicVolume * 10, now + 1.5);
-    gain.gain.linearRampToValueAtTime(0, now + 5.5);
+    gain.gain.linearRampToValueAtTime(0.04 * musicVolume, now + 2);
+    gain.gain.linearRampToValueAtTime(0, now + 6);
 
     osc.connect(filter);
     filter.connect(gain);
     gain.connect(musicCtx.destination);
 
-    osc.start(now + i * 0.15);
-    osc.stop(now + 6);
+    osc.start(now + i * 0.2);
+    osc.stop(now + 6.5);
     musicNodes.push(osc);
   });
 
-  // Редкий мягкий колокольчик
-  if (Math.random() > 0.6) {
+  // Мягкий колокольчик (редко)
+  if (Math.random() > 0.65) {
     const bell = musicCtx.createOscillator();
     const bellGain = musicCtx.createGain();
     bell.type = 'sine';
     const bellFreq = [440, 523.25, 659.25][Math.floor(Math.random() * 3)];
     bell.frequency.setValueAtTime(bellFreq, now + 2);
     bellGain.gain.setValueAtTime(0, now + 2);
-    bellGain.gain.linearRampToValueAtTime(0.02 * musicVolume * 10, now + 2.3);
-    bellGain.gain.exponentialRampToValueAtTime(0.001, now + 4.5);
+    bellGain.gain.linearRampToValueAtTime(0.025 * musicVolume, now + 2.5);
+    bellGain.gain.exponentialRampToValueAtTime(0.001, now + 5);
     bell.connect(bellGain);
     bellGain.connect(musicCtx.destination);
     bell.start(now + 2);
-    bell.stop(now + 5);
+    bell.stop(now + 5.5);
     musicNodes.push(bell);
   }
 
   setTimeout(() => {
     if (musicPlaying) playAmbientMusic();
-  }, 6000);
+  }, 6500);
 }
 
 function stopMusic(){
@@ -221,14 +230,16 @@ function stopMusic(){
   }
 }
 
-// Запуск при первом клике
-document.addEventListener('click', () => {
-  if (!musicPlaying) startMusic();
-}, { once: true });
-
+// Экспорт для game.js
 window.stopBackgroundMusic = stopMusic;
 window.startBackgroundMusic = startMusic;
-window.setMusicVolume = (v) => { musicVolume = v; };
+window.setMusicVolume = (v) => { musicVolume = Math.max(0, Math.min(1, v)); };
+
+// ========== КЛИКИ ПО КНОПКАМ МЕНЮ ==========
+document.getElementById('startBtn').addEventListener('click', () => {
+  // Музыка запускается внутри startGame(), но на всякий случай:
+  if (!musicPlaying) startMusic();
+});
 </script>
 </body>
 </html>

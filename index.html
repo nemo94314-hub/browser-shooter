@@ -9,7 +9,7 @@
 <body>
 <canvas id="bgCanvas"></canvas>
 
-<!-- SVG-ИКОНКИ (без черепа — он теперь картинкой) -->
+<!-- SVG-ИКОНКИ -->
 <svg style="display:none;">
   <symbol id="icon-pistol" viewBox="0 0 64 64">
     <path d="M8 28 L8 24 L40 24 L40 20 L44 20 L44 24 L52 24 L52 28 L44 28 L44 32 L40 32 L40 28 L30 28 L30 40 L26 40 L26 28 Z" fill="currentColor" stroke="#000" stroke-width="1"/>
@@ -99,7 +99,7 @@
     <img src="skull.png" class="skull-img" alt="ZOMBIESHOOT">
     <h1 class="game-title">ZOMBIE<span class="red">SHOOT</span></h1>
     <p class="tagline">ВЫЖИВИ В ЗОНЕ ЗАРАЖЕНИЯ</p>
-    <div class="version">v11.0 · 8 LEVELS</div>
+    <div class="version">v12.0 · HORROR</div>
     <div class="coins-display"><svg class="ico-sm"><use href="#icon-coin"/></svg> <span id="menuCoins">0</span></div>
     <button id="playBtn" class="btn-primary">ИГРАТЬ</button>
     <button id="shopBtn" class="btn-secondary"><svg class="ico-sm"><use href="#icon-weapon-switch"/></svg> МАГАЗИН</button>
@@ -221,8 +221,21 @@
   </div>
 </div>
 
+<!-- Three.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<!-- EffectComposer для эффектов хоррора -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/FilmShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/VignetteShader.js"></script>
+
+<!-- Игра -->
 <script src="game.js"></script>
+
+<!-- Фоновые частицы + музыка -->
 <script>
 const bg = document.getElementById('bgCanvas');
 const bctx = bg.getContext('2d');

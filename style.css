@@ -1,58 +1,421 @@
-*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Tahoma,Arial,sans-serif}
-body{overflow:hidden;background:#07080f;color:#fff}
-canvas{display:block}
-#bgCanvas{position:fixed;inset:0;z-index:0}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Impact', 'Segoe UI', Tahoma, Arial, sans-serif;
+}
 
-#menu,#gameover{position:fixed;inset:0;background:radial-gradient(circle at 50% 30%,rgba(80,0,0,0.35),rgba(0,0,0,0.9));display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;text-align:center;padding:20px;overflow-y:auto}
-.menu-content{position:relative;z-index:1;max-width:620px;width:100%;animation:fadeIn 0.8s}
-@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+body {
+  overflow: hidden;
+  background: #050508;
+  color: #fff;
+}
 
-.logo{font-size:80px;margin-bottom:-10px;animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+/* Фоновый канвас (только для меню) */
+#bgCanvas {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  display: block;
+}
 
-.game-title{font-size:76px;font-weight:900;letter-spacing:8px;line-height:0.9;text-transform:uppercase;background:linear-gradient(135deg,#fff,#aaa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px;text-shadow:0 0 40px rgba(255,255,255,0.2)}
-.game-title .red{display:block;background:linear-gradient(135deg,#ff0033,#ff6666);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 25px rgba(255,0,51,0.8))}
+/* ============ ЭКРАНЫ (меню, настройки, смерть) ============ */
+.screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+  overflow-y: auto;
+  background: radial-gradient(circle at 50% 40%, rgba(80, 0, 0, 0.35), rgba(0, 0, 0, 0.95) 70%);
+}
 
-.tagline{font-size:16px;color:#888;margin-bottom:10px;letter-spacing:3px;text-transform:uppercase}
-.version{font-size:12px;color:#555;margin-bottom:30px;letter-spacing:2px}
+.menu-box {
+  max-width: 560px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: fadeUp 0.7s ease-out;
+}
 
-.btn-primary{padding:18px 60px;font-size:20px;font-weight:800;letter-spacing:3px;background:linear-gradient(135deg,#c00,#ff0033);color:#fff;border:2px solid #ff0033;border-radius:4px;cursor:pointer;transition:0.3s;margin-bottom:12px;text-transform:uppercase;box-shadow:0 0 25px rgba(255,0,51,0.4)}
-.btn-primary:hover{transform:scale(1.05);box-shadow:0 0 50px rgba(255,0,51,0.9)}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(25px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
-.btn-secondary{padding:10px 30px;font-size:14px;font-weight:600;background:transparent;color:#aaa;border:1px solid #444;border-radius:4px;cursor:pointer;margin-bottom:30px;letter-spacing:2px}
-.btn-secondary:hover{border-color:#888;color:#fff}
+/* ============ ЧЕРЕП ============ */
+.skull-img {
+  width: 200px;
+  height: auto;
+  max-height: 240px;
+  object-fit: contain;
+  filter:
+    drop-shadow(0 0 30px rgba(255, 0, 51, 0.7))
+    drop-shadow(0 0 60px rgba(255, 0, 51, 0.4));
+  animation: skullPulse 3s ease-in-out infinite;
+  margin-bottom: 12px;
+  user-select: none;
+  -webkit-user-drag: none;
+}
 
-.controls{background:rgba(15,20,40,0.7);border:1px solid rgba(108,99,255,0.25);border-radius:8px;padding:18px;backdrop-filter:blur(10px);margin-top:10px}
-.controls-title{font-size:12px;font-weight:700;letter-spacing:5px;color:#666;margin-bottom:12px}
-.control-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.control-grid>div{display:flex;flex-direction:column;align-items:center;gap:4px}
-.control-grid .key{padding:4px 10px;background:#111;border:1px solid #333;border-radius:4px;font-size:12px;font-weight:700;color:#ff6666;min-width:50px;text-align:center}
-.control-grid span{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:1px}
+.skull-img.small {
+  width: 120px;
+  max-height: 140px;
+}
 
-/* Настройки */
-#settings{position:fixed;inset:0;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:200}
-.settings-panel{background:#111827;border:1px solid #333;border-radius:12px;padding:40px;max-width:500px;width:90%}
-.settings-panel h2{margin-bottom:30px;font-size:24px;letter-spacing:4px}
-.setting-row{margin-bottom:20px;display:flex;flex-direction:column;gap:8px}
-.setting-row label{font-size:13px;color:#aaa;text-transform:uppercase;letter-spacing:2px}
-.setting-row input[type=range]{width:100%;accent-color:#ff0033}
-.setting-row select{background:#1a1e2e;color:#fff;border:1px solid #333;padding:10px;border-radius:4px;font-size:14px}
+@keyframes skullPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
 
-/* HUD */
-#hud{position:fixed;inset:0;pointer-events:none;z-index:50}
-#score,#health,#ammo{position:absolute;font-size:20px;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,0.95);font-family:'Courier New',monospace}
-#score{top:20px;left:20px;color:#00d4ff}
-#health{top:20px;right:20px;color:#ff4757}
-#ammo{bottom:20px;right:20px;color:#ffa502}
-#crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:26px;color:#00ff88;text-shadow:0 0 8px #00ff88}
-#damageVignette{position:absolute;inset:0;background:radial-gradient(circle,transparent 40%,rgba(255,0,0,0.6));opacity:0;transition:opacity 0.3s}
+/* ============ ЗАГОЛОВОК ============ */
+.game-title {
+  font-size: 64px;
+  font-weight: 900;
+  letter-spacing: 6px;
+  line-height: 0.95;
+  text-transform: uppercase;
+  color: #f0f0f0;
+  text-shadow:
+    0 0 20px rgba(255, 255, 255, 0.3),
+    0 4px 0 #2a0000,
+    0 6px 20px rgba(0, 0, 0, 0.9);
+  margin-bottom: 6px;
+}
 
-.death-title{font-size:64px;font-weight:900;letter-spacing:8px;color:#ff0033;text-shadow:0 0 40px rgba(255,0,51,0.9);margin-bottom:20px}
-.final-score-label{font-size:14px;color:#888;letter-spacing:4px;text-transform:uppercase}
-.final-score-value{font-size:90px;font-weight:900;color:#00d4ff;text-shadow:0 0 40px rgba(0,212,255,0.8);margin-bottom:40px}
+.game-title .red {
+  display: block;
+  color: #ff0033;
+  text-shadow:
+    0 0 25px rgba(255, 0, 51, 0.9),
+    0 0 50px rgba(255, 0, 51, 0.5),
+    0 4px 0 #4a0000;
+}
 
-@media(max-width:600px){
-  .game-title{font-size:42px;letter-spacing:4px}
-  .control-grid{grid-template-columns:repeat(2,1fr)}
-  .btn-primary{padding:14px 40px;font-size:16px}
+.tagline {
+  font-size: 13px;
+  color: #888;
+  letter-spacing: 5px;
+  margin-bottom: 4px;
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+}
+
+.version {
+  font-size: 11px;
+  color: #444;
+  letter-spacing: 3px;
+  margin-bottom: 30px;
+  font-family: 'Courier New', monospace;
+}
+
+/* ============ КНОПКИ ============ */
+.btn-primary {
+  padding: 16px 55px;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  background: linear-gradient(135deg, #8a0000, #ff0033);
+  color: #fff;
+  border: 2px solid #ff0033;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: 0.25s;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  box-shadow: 0 0 30px rgba(255, 0, 51, 0.5), inset 0 0 15px rgba(255, 255, 255, 0.1);
+  font-family: 'Impact', sans-serif;
+}
+
+.btn-primary:hover {
+  transform: scale(1.06);
+  box-shadow: 0 0 55px rgba(255, 0, 51, 1), inset 0 0 25px rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, #a00000, #ff1a4d);
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-secondary {
+  padding: 12px 40px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  background: transparent;
+  color: #bbb;
+  border: 1px solid #444;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: 0.25s;
+  text-transform: uppercase;
+  font-family: 'Impact', sans-serif;
+}
+
+.btn-secondary:hover {
+  border-color: #ff0033;
+  color: #ff4444;
+  box-shadow: 0 0 20px rgba(255, 0, 51, 0.3);
+}
+
+/* ============ НАСТРОЙКИ ============ */
+.settings-box {
+  max-width: 600px;
+  width: 100%;
+  background: rgba(10, 12, 20, 0.95);
+  border: 2px solid #ff0033;
+  border-radius: 8px;
+  padding: 35px;
+  box-shadow: 0 0 60px rgba(255, 0, 51, 0.35), inset 0 0 40px rgba(80, 0, 0, 0.15);
+  animation: fadeUp 0.5s;
+}
+
+.settings-box h2 {
+  font-size: 32px;
+  letter-spacing: 6px;
+  text-align: center;
+  color: #ff0033;
+  margin-bottom: 28px;
+  text-transform: uppercase;
+  text-shadow: 0 0 20px rgba(255, 0, 51, 0.7);
+  font-family: 'Impact', sans-serif;
+}
+
+.settings-block {
+  background: rgba(20, 10, 10, 0.6);
+  border-left: 3px solid #ff0033;
+  padding: 18px 22px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+}
+
+.settings-block h3 {
+  font-size: 13px;
+  letter-spacing: 4px;
+  color: #888;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+}
+
+.ctrl-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.ctrl-grid > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.ctrl-grid kbd {
+  padding: 5px 12px;
+  background: #0a0a0a;
+  border: 1px solid #ff0033;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ff6666;
+  min-width: 60px;
+  text-align: center;
+  box-shadow: 0 0 10px rgba(255, 0, 51, 0.3), inset 0 0 5px rgba(255, 0, 51, 0.15);
+}
+
+.ctrl-grid span {
+  font-size: 10px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-family: 'Courier New', monospace;
+}
+
+.settings-box label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 16px;
+  font-family: 'Courier New', monospace;
+}
+
+.settings-box input[type=range] {
+  width: 100%;
+  accent-color: #ff0033;
+  cursor: pointer;
+}
+
+.settings-box select {
+  background: #0a0a0a;
+  color: #fff;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 10px;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+}
+
+.settings-box select:focus {
+  outline: 1px solid #ff0033;
+}
+
+#closeSettings {
+  margin-top: 10px;
+  width: 100%;
+}
+
+/* ============ HUD ============ */
+#hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+}
+
+#score, #health, #ammo {
+  position: absolute;
+  font-size: 20px;
+  font-weight: 800;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 1), 0 0 20px rgba(0, 0, 0, 0.8);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+}
+
+#score {
+  top: 20px;
+  left: 20px;
+  color: #00d4ff;
+}
+
+#health {
+  top: 20px;
+  right: 20px;
+  color: #ff4757;
+}
+
+#ammo {
+  bottom: 20px;
+  right: 20px;
+  color: #ffa502;
+}
+
+#crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  color: #00ff88;
+  text-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88;
+  font-weight: 300;
+}
+
+#damageVignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, transparent 35%, rgba(255, 0, 0, 0.7));
+  opacity: 0;
+  transition: opacity 0.25s;
+  pointer-events: none;
+}
+
+/* ============ ЭКРАН СМЕРТИ ============ */
+.death-title {
+  font-size: 72px;
+  font-weight: 900;
+  letter-spacing: 10px;
+  color: #ff0033;
+  text-transform: uppercase;
+  text-shadow: 0 0 40px rgba(255, 0, 51, 1), 0 0 80px rgba(255, 0, 51, 0.6);
+  margin-bottom: 15px;
+  animation: shake 0.5s;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-12px); }
+  75% { transform: translateX(12px); }
+}
+
+.final-score-label {
+  font-size: 13px;
+  color: #666;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.final-score-value {
+  font-size: 100px;
+  font-weight: 900;
+  color: #00d4ff;
+  text-shadow: 0 0 40px rgba(0, 212, 255, 1), 0 0 80px rgba(0, 212, 255, 0.5);
+  margin-bottom: 30px;
+  line-height: 1;
+  font-family: 'Courier New', monospace;
+}
+
+/* ============ МОБИЛЬНАЯ АДАПТАЦИЯ ============ */
+@media (max-width: 600px) {
+  .game-title {
+    font-size: 38px;
+    letter-spacing: 3px;
+  }
+
+  .skull-img {
+    width: 140px;
+    max-height: 170px;
+  }
+
+  .skull-img.small {
+    width: 90px;
+    max-height: 110px;
+  }
+
+  .btn-primary {
+    padding: 14px 35px;
+    font-size: 16px;
+    letter-spacing: 2px;
+  }
+
+  .btn-secondary {
+    padding: 10px 25px;
+    font-size: 13px;
+  }
+
+  .ctrl-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .settings-box {
+    padding: 22px;
+  }
+
+  .settings-box h2 {
+    font-size: 22px;
+    letter-spacing: 3px;
+  }
+
+  .death-title {
+    font-size: 44px;
+    letter-spacing: 5px;
+  }
+
+  .final-score-value {
+    font-size: 64px;
+  }
 }

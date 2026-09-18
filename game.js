@@ -1,4 +1,6 @@
-// ============ ZOMBIESHOOT v8.0 ============
+// ============ ZOMBIESHOOT v8.1 ============
+// Фикс: зелёный экран, музыка, стреляющие зомби
+
 let scene, camera, renderer;
 let score = 0, health = 100, wave = 1;
 let isGameActive = false;
@@ -28,12 +30,14 @@ let nearLootCrate = null;
 const keys = { w:false, a:false, s:false, d:false };
 
 // ============================================
+// ИНИЦИАЛИЗАЦИЯ
+// ============================================
 function init() {
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x6a8aa8);
-  scene.fog = new THREE.Fog(0x6a8aa8, 50, 160);
+  scene.background = new THREE.Color(0x87a5c4);
+  scene.fog = new THREE.Fog(0x87a5c4, 60, 130);
 
-  camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 500);
+  camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 300);
   camera.position.set(0, playerY, 0);
   scene.add(camera);
 
@@ -45,13 +49,23 @@ function init() {
   renderer.domElement.style.zIndex = '1';
   document.body.appendChild(renderer.domElement);
 
-  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.7));
   const sun = new THREE.DirectionalLight(0xfff0d0, 1);
   sun.position.set(40, 60, 20);
   sun.castShadow = true;
   sun.shadow.mapSize.width = 1024;
   sun.shadow.mapSize.height = 1024;
+  sun.shadow.camera.left = -60;
+  sun.shadow.camera.right = 60;
+  sun.shadow.camera.top = 60;
+  sun.shadow.camera.bottom = -60;
   scene.add(sun);
+
+  // Небо-сфера
+  const skyGeo = new THREE.SphereGeometry(150, 32, 16);
+  const skyMat = new THREE.MeshBasicMaterial({ color: 0x87a5c4, side: THREE.BackSide, fog: false });
+  const sky = new THREE.Mesh(skyGeo, skyMat);
+  scene.add(sky);
 
   createGround();
   createBase();
@@ -69,56 +83,19 @@ function init() {
 }
 
 // ============================================
-function createDebugPanel() {
-  const panel = document.createElement('div');
-  panel.id = 'debugPanel';
-  panel.style.cssText = `
-    position:fixed; top:60px; left:10px; z-index:9999;
-    background:rgba(0,0,0,0.85); color:#0f0; padding:8px 12px;
-    font-family:'Courier New',monospace; font-size:12px;
-    border:1px solid #0f0; border-radius:4px;
-    pointer-events:none; line-height:1.5; white-space:pre;
-  `;
-  panel.style.display = 'none';
-  document.body.appendChild(panel);
-}
-
-function updateDebugPanel() {
-  const panel = document.getElementById('debugPanel');
-  if (!panel) return;
-  if (!debugMode) { panel.style.display = 'none'; return; }
-  panel.style.display = 'block';
-
-  const now = performance.now();
-  const w = WEAPONS[currentWeapon];
-  const cd = Math.max(0, w.cooldown - (now - lastShotTime));
-
-  panel.textContent =
-    `🎮 DEBUG\n` +
-    `active: ${isGameActive}\n` +
-    `enemies: ${enemies.length}\n` +
-    `bullets: ${enemyBullets.length}\n` +
-    `grenades: ${grenades.length}\n` +
-    `loot: ${lootCrates.length}\n` +
-    `weapon: ${w.name}\n` +
-    `ammo: ${w.ammo}/${w.maxAmmo}\n` +
-    `medkits: ${medkits}\n` +
-    `cooldown: ${cd.toFixed(0)}ms\n` +
-    `pointerLock: ${!!document.pointerLockElement}`;
-}
-
+// ЗЕМЛЯ
 // ============================================
 function createGround() {
   const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(300, 300),
-    new THREE.MeshStandardMaterial({ color: 0x4a6b3a, roughness: 0.95 })
+    new THREE.PlaneGeometry(100, 100),
+    new THREE.MeshStandardMaterial({ color: 0x4a6b3a, roughness: 1 })
   );
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
   scene.add(ground);
 
   const road = new THREE.Mesh(
-    new THREE.PlaneGeometry(14, 100),
+    new THREE.PlaneGeometry(10, 80),
     new THREE.MeshStandardMaterial({ color: 0x2a2a2e })
   );
   road.rotation.x = -Math.PI / 2;
@@ -126,13 +103,16 @@ function createGround() {
   scene.add(road);
 }
 
+// ============================================
+// БАЗА
+// ============================================
 function createBase() {
   const wallMat = new THREE.MeshStandardMaterial({ color: 0x5a5a5a });
   [
-    { pos:[0,2,-50], size:[100,4,1] },
-    { pos:[0,2,50],  size:[100,4,1] },
-    { pos:[-50,2,0], size:[1,4,100] },
-    { pos:[50,2,0],  size:[1,4,100] }
+    { pos:[0,2,-48], size:[96,4,1] },
+    { pos:[0,2,48],  size:[96,4,1] },
+    { pos:[-48,2,0], size:[1,4,96] },
+    { pos:[48,2,0],  size:[1,4,96] }
   ].forEach(w => {
     const wall = new THREE.Mesh(new THREE.BoxGeometry(...w.size), wallMat);
     wall.position.set(...w.pos);
@@ -142,7 +122,7 @@ function createBase() {
     obstacles.push(wall);
   });
 
-  const hescoMat = new THREE.MeshStandardMaterial({ color: 0x8a7a5a });
+  const hescoMat = new THREE.MeshStandardMaterial({ color: 0x8a7a5a, roughness: 0.95 });
   [[12,1.5,8,3,3,2],[-12,1.5,8,3,3,2],[12,1.5,-8,3,3,2],[-12,1.5,-8,3,3,2]].forEach(([x,y,z,sx,sy,sz]) => {
     const h = new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz), hescoMat);
     h.position.set(x,y,z);
@@ -161,6 +141,8 @@ function createBase() {
   });
 }
 
+// ============================================
+// ОРУЖИЕ
 // ============================================
 function createWeapon(type) {
   if (weaponGroup) camera.remove(weaponGroup);
@@ -232,7 +214,9 @@ function createZombie() {
   const eR = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), glow);
   eR.position.set(0.1, 1.48, -0.24); g.add(eR);
 
-  // Оружие в руках зомби
+  const eyeLight = new THREE.PointLight(0xff0000, 0.3, 2);
+  eyeLight.position.set(0, 1.48, -0.35); g.add(eyeLight);
+
   const gunMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a });
   const zGun = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.7), gunMat);
   zGun.position.set(0.35, 0.75, -0.5);
@@ -248,13 +232,12 @@ function spawnEnemy() {
 
   const e = createZombie();
   const sides = [
-    [-47,-30],[-47,0],[-47,30],[47,-30],[47,0],[47,30],
-    [-30,-47],[0,-47],[30,-47],[-30,47],[0,47],[30,47]
+    [-45,-30],[-45,0],[-45,30],[45,-30],[45,0],[45,30],
+    [-30,-45],[0,-45],[30,-45],[-30,45],[0,45],[30,45]
   ];
   const s = sides[Math.floor(Math.random() * sides.length)];
   e.position.set(s[0] + (Math.random() - 0.5) * 3, 0.85, s[1] + (Math.random() - 0.5) * 3);
 
-  // Определяем поведение зомби: shooter, grenadier, melee
   const r = Math.random();
   let type = 'melee';
   if (r < 0.5) type = 'shooter';
@@ -274,8 +257,10 @@ function spawnEnemy() {
 }
 
 // ============================================
+// КОЛЛИЗИИ
+// ============================================
 function checkCollision(pos, r) {
-  if (Math.abs(pos.x) > 48.5 || Math.abs(pos.z) > 48.5) return true;
+  if (Math.abs(pos.x) > 46.5 || Math.abs(pos.z) > 46.5) return true;
   for (const o of obstacles) {
     if (!o.userData.size) continue;
     const hx = o.userData.size.x / 2;
@@ -289,7 +274,7 @@ function checkCollision(pos, r) {
 }
 
 // ============================================
-// ИГРОК СТРЕЛЯЕТ
+// СТРЕЛЬБА ИГРОКА
 // ============================================
 function shoot() {
   if (!isGameActive || reloading) return;
@@ -388,14 +373,12 @@ function killEnemy(en) {
   playHitSound();
   updateHUD();
 
-  // Спавним лут-ящик
   spawnLootCrate(en.position.clone(), en.userData.weaponDrop);
-  // 30% шанс аптечки
   if (Math.random() < 0.3) spawnMedkitPickup(en.position.clone());
 }
 
 // ============================================
-// ЛУТ-ЯЩИКИ
+// ЛУТ
 // ============================================
 function spawnLootCrate(pos, weaponType) {
   const g = new THREE.Group();
@@ -404,23 +387,17 @@ function spawnLootCrate(pos, weaponType) {
   box.castShadow = true;
   g.add(box);
 
-  // Ободок
-  const trimMat = new THREE.MeshStandardMaterial({ color: 0xffcc00, metalness: 0.9, emissive: 0xffaa00, emissiveIntensity: 0.3 });
+  const trimMat = new THREE.MeshStandardMaterial({ color: 0xffcc00, metalness: 0.9, emissive: 0xffaa00, emissiveIntensity: 0.4 });
   const trim = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.1, 0.65), trimMat);
   trim.position.y = 0.35;
   g.add(trim);
 
-  // Свечение
   const glow = new THREE.PointLight(0xffaa00, 0.8, 3);
   g.add(glow);
 
   g.position.copy(pos);
   g.position.y = 0.3;
-  g.userData = {
-    weapon: weaponType,
-    phase: Math.random() * Math.PI * 2,
-    isCrate: true
-  };
+  g.userData = { weapon: weaponType, phase: Math.random() * Math.PI * 2, isCrate: true };
   scene.add(g);
   lootCrates.push(g);
 }
@@ -432,14 +409,11 @@ function spawnMedkitPickup(pos) {
   box.castShadow = true;
   g.add(box);
 
-  // Красный крест
   const crossMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
   const c1 = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.08), crossMat);
-  c1.position.y = 0.13;
-  g.add(c1);
+  c1.position.y = 0.13; g.add(c1);
   const c2 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.05, 0.3), crossMat);
-  c2.position.y = 0.13;
-  g.add(c2);
+  c2.position.y = 0.13; g.add(c2);
 
   g.position.copy(pos);
   g.position.y = 0.15;
@@ -457,20 +431,14 @@ function updateLootCrates(delta) {
     crate.position.y = (crate.userData.isMedkit ? 0.15 : 0.3) + Math.sin(t + crate.userData.phase) * 0.1;
 
     const dist = crate.position.distanceTo(camera.position);
-    if (dist < 2.5) {
-      nearLootCrate = crate;
-    }
+    if (dist < 2.5) nearLootCrate = crate;
   });
 
   const prompt = document.getElementById('interactPrompt');
   if (prompt) {
     if (nearLootCrate) {
       prompt.style.display = 'block';
-      if (nearLootCrate.userData.isMedkit) {
-        prompt.textContent = '[F] Подобрать аптечку';
-      } else {
-        prompt.textContent = '[F] Открыть ящик';
-      }
+      prompt.textContent = nearLootCrate.userData.isMedkit ? '[F] Подобрать аптечку' : '[F] Открыть ящик';
     } else {
       prompt.style.display = 'none';
     }
@@ -484,7 +452,6 @@ function pickUpLoot() {
     medkits = Math.min(MAX_MEDKITS, medkits + 1);
     showToast('+1 🩹 Аптечка');
   } else {
-    // Меняем оружие на то, что в ящике
     const newWeapon = nearLootCrate.userData.weapon;
     WEAPONS[newWeapon].ammo = WEAPONS[newWeapon].maxAmmo;
     currentWeapon = newWeapon;
@@ -505,13 +472,13 @@ function showToast(text) {
     position:fixed; top:30%; left:50%; transform:translateX(-50%);
     color:#ffdd00; font-family:'Courier New',monospace; font-size:24px;
     font-weight:800; text-shadow:0 0 15px #ffdd00, 0 2px 8px #000;
-    z-index:200; pointer-events:none; animation:toastFade 1.5s ease-out forwards;
+    z-index:200; pointer-events:none;
+    animation:toastFade 1.5s ease-out forwards;
   `;
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 1500);
 }
 
-// CSS для toast
 const toastStyle = document.createElement('style');
 toastStyle.textContent = `@keyframes toastFade { 0% { opacity:0; transform:translate(-50%, -20px); } 20% { opacity:1; transform:translate(-50%, 0); } 80% { opacity:1; } 100% { opacity:0; transform:translate(-50%, -20px); } }`;
 document.head.appendChild(toastStyle);
@@ -547,7 +514,7 @@ function playHealSound() {
 // ============================================
 // ЗВУКИ
 // ============================================
-function playShootSound(type) {
+function playShootSound() {
   if (!audioCtx) return;
   const o = audioCtx.createOscillator();
   const g = audioCtx.createGain();
@@ -580,28 +547,19 @@ function enemyShoot(en) {
   start.y = 1.4;
   const target = camera.position.clone();
   const dir = new THREE.Vector3().subVectors(target, start).normalize();
-  // Небольшая неточность
   dir.x += (Math.random() - 0.5) * 0.08;
   dir.y += (Math.random() - 0.5) * 0.05;
   dir.z += (Math.random() - 0.5) * 0.08;
   dir.normalize();
 
-  // Меш пули
   const geo = new THREE.SphereGeometry(0.08, 6, 6);
   const mat = new THREE.MeshBasicMaterial({ color: 0xff6600 });
   const bullet = new THREE.Mesh(geo, mat);
   bullet.position.copy(start);
   scene.add(bullet);
 
-  enemyBullets.push({
-    mesh: bullet,
-    dir: dir,
-    speed: 40,
-    life: 2.5,
-    damage: 8
-  });
+  enemyBullets.push({ mesh: bullet, dir: dir, speed: 40, life: 2.5, damage: 8 });
 
-  // Звук выстрела зомби
   if (audioCtx) {
     const o = audioCtx.createOscillator();
     const g = audioCtx.createGain();
@@ -620,7 +578,7 @@ function enemyThrowGrenade(en) {
   start.y = 1.4;
   const target = camera.position.clone();
   const dir = new THREE.Vector3().subVectors(target, start).normalize();
-  dir.y = 0.4; // дуга
+  dir.y = 0.4;
   dir.normalize();
 
   const geo = new THREE.SphereGeometry(0.18, 8, 8);
@@ -630,12 +588,7 @@ function enemyThrowGrenade(en) {
   gren.castShadow = true;
   scene.add(gren);
 
-  grenades.push({
-    mesh: gren,
-    velocity: dir.multiplyScalar(18),
-    timer: 2.0,
-    exploded: false
-  });
+  grenades.push({ mesh: gren, velocity: dir.multiplyScalar(18), timer: 2.0, exploded: false });
 }
 
 function updateEnemyBullets(delta) {
@@ -644,7 +597,6 @@ function updateEnemyBullets(delta) {
     b.mesh.position.addScaledVector(b.dir, b.speed * delta);
     b.life -= delta;
 
-    // Проверяем попадание в игрока
     const dist = b.mesh.position.distanceTo(camera.position);
     if (dist < 0.6) {
       health -= b.damage;
@@ -666,17 +618,12 @@ function updateEnemyBullets(delta) {
 function updateGrenades(delta) {
   for (let i = grenades.length - 1; i >= 0; i--) {
     const g = grenades[i];
-    if (g.exploded) {
-      scene.remove(g.mesh);
-      grenades.splice(i, 1);
-      continue;
-    }
+    if (g.exploded) { scene.remove(g.mesh); grenades.splice(i, 1); continue; }
 
     g.timer -= delta;
     g.mesh.position.addScaledVector(g.velocity, delta);
     g.velocity.y -= 15 * delta;
 
-    // Отскок от земли
     if (g.mesh.position.y < 0.2) {
       g.mesh.position.y = 0.2;
       g.velocity.y *= -0.4;
@@ -684,15 +631,10 @@ function updateGrenades(delta) {
       g.velocity.z *= 0.7;
     }
 
-    // Мигание
-    if (g.timer < 1 && Math.floor(g.timer * 8) % 2 === 0) {
-      g.mesh.material.color.setHex(0xff0000);
-    } else {
-      g.mesh.material.color.setHex(0x2a4a1a);
-    }
+    if (g.timer < 1 && Math.floor(g.timer * 8) % 2 === 0) g.mesh.material.color.setHex(0xff0000);
+    else g.mesh.material.color.setHex(0x2a4a1a);
 
     if (g.timer <= 0) {
-      // Взрыв
       g.exploded = true;
       const dist = g.mesh.position.distanceTo(camera.position);
       if (dist < 5) {
@@ -703,7 +645,6 @@ function updateGrenades(delta) {
         if (health <= 0) gameOver();
       }
 
-      // Визуал: огненный шар
       const fireGeo = new THREE.SphereGeometry(1.5, 12, 12);
       const fireMat = new THREE.MeshBasicMaterial({ color: 0xff6600, transparent: true, opacity: 0.9 });
       const fire = new THREE.Mesh(fireGeo, fireMat);
@@ -711,7 +652,6 @@ function updateGrenades(delta) {
       scene.add(fire);
       setTimeout(() => scene.remove(fire), 300);
 
-      // Урон зомби в радиусе (от гранат по своим)
       enemies.forEach(en => {
         if (en.position.distanceTo(g.mesh.position) < 5) {
           en.userData.health -= 40;
@@ -719,7 +659,6 @@ function updateGrenades(delta) {
         }
       });
 
-      // Звук взрыва
       if (audioCtx) {
         const o = audioCtx.createOscillator();
         const gn = audioCtx.createGain();
@@ -739,7 +678,6 @@ function updateGrenades(delta) {
 // УПРАВЛЕНИЕ
 // ============================================
 function setupControls() {
-
   document.addEventListener('keydown', (e) => {
     if (!isGameActive) return;
 
@@ -750,10 +688,7 @@ function setupControls() {
 
     if (e.code === 'Space') {
       e.preventDefault();
-      if (!isJumping) {
-        verticalVelocity = JUMP_POWER;
-        isJumping = true;
-      }
+      if (!isJumping) { verticalVelocity = JUMP_POWER; isJumping = true; }
     }
     if (e.code === 'KeyR') reload();
     if (e.code === 'Digit1') { currentWeapon = 'pistol'; createWeapon('pistol'); updateHUD(); }
@@ -854,22 +789,17 @@ function updateEnemies(delta) {
     const dist = dir.length();
     dir.normalize();
 
-    // Движение к игроку
     if (dist > 2) {
       const np = en.position.clone().addScaledVector(dir, en.userData.speed * delta);
       np.y = 0.85;
-      if (!checkCollision(np, en.userData.radius)) {
-        en.position.copy(np);
-      }
+      if (!checkCollision(np, en.userData.radius)) en.position.copy(np);
     } else {
-      // Ближний бой
       health -= 0.5;
       showDamage();
       updateHUD();
       if (health <= 0) gameOver();
     }
 
-    // Стрельба / граната
     if (en.userData.type === 'shooter' && dist < 35 && dist > 3 && now > en.userData.nextShotTime) {
       enemyShoot(en);
       en.userData.nextShotTime = now + 1500 + Math.random() * 2000;
@@ -903,6 +833,47 @@ function animate() {
   updateLootCrates(d);
   updateDebugPanel();
   renderer.render(scene, camera);
+}
+
+// ============================================
+// DEBUG
+// ============================================
+function createDebugPanel() {
+  const panel = document.createElement('div');
+  panel.id = 'debugPanel';
+  panel.style.cssText = `
+    position:fixed; top:60px; left:10px; z-index:9999;
+    background:rgba(0,0,0,0.85); color:#0f0; padding:8px 12px;
+    font-family:'Courier New',monospace; font-size:12px;
+    border:1px solid #0f0; border-radius:4px;
+    pointer-events:none; line-height:1.5; white-space:pre;
+    display:none;
+  `;
+  document.body.appendChild(panel);
+}
+
+function updateDebugPanel() {
+  const panel = document.getElementById('debugPanel');
+  if (!panel) return;
+  if (!debugMode) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+
+  const now = performance.now();
+  const w = WEAPONS[currentWeapon];
+  const cd = Math.max(0, w.cooldown - (now - lastShotTime));
+
+  panel.textContent =
+    `🎮 DEBUG\n` +
+    `active: ${isGameActive}\n` +
+    `enemies: ${enemies.length}\n` +
+    `bullets: ${enemyBullets.length}\n` +
+    `grenades: ${grenades.length}\n` +
+    `loot: ${lootCrates.length}\n` +
+    `weapon: ${w.name}\n` +
+    `ammo: ${w.ammo}/${w.maxAmmo}\n` +
+    `medkits: ${medkits}\n` +
+    `cooldown: ${cd.toFixed(0)}ms\n` +
+    `pointerLock: ${!!document.pointerLockElement}`;
 }
 
 // ============================================
@@ -950,7 +921,6 @@ function startGame() {
   reloading = false;
   Object.keys(WEAPONS).forEach(k => WEAPONS[k].ammo = WEAPONS[k].maxAmmo);
 
-  // Очистка
   enemies.forEach(e => scene.remove(e));
   enemies = [];
   enemyBullets.forEach(b => scene.remove(b.mesh));
@@ -964,8 +934,12 @@ function startGame() {
   createWeapon('rifle');
   updateHUD();
 
-  if (window.stopBackgroundMusic) window.stopBackgroundMusic();
   if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  if (window.startBackgroundMusic) window.startBackgroundMusic();
+
+  setTimeout(() => {
+    if (renderer.domElement.requestPointerLock) renderer.domElement.requestPointerLock();
+  }, 200);
 }
 
 function gameOver() {
@@ -1000,11 +974,7 @@ function setupSettings() {
     else if (qual.value === 'high') { renderer.shadowMap.enabled = true; scene.fog.far = 180; }
     else { renderer.shadowMap.enabled = true; scene.fog.far = 140; }
   });
-  if (dbg) {
-    dbg.addEventListener('change', () => {
-      debugMode = dbg.checked;
-    });
-  }
+  if (dbg) dbg.addEventListener('change', () => { debugMode = dbg.checked; });
 }
 
 // ============================================

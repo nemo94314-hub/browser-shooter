@@ -1,7 +1,8 @@
 
 ---
 
-## 🚀 Запуск
+## 🚀 Запуск ![Uploading image.png…]()
+
 
 1. Скачай все файлы в одну папку.
 2. Открой `index.html` в браузере (Chrome, Firefox, Safari).

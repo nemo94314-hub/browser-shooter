@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ZOMBIESHOOT</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -10,19 +10,17 @@
 
 <canvas id="bgCanvas"></canvas>
 
-<!-- МЕНЮ -->
 <div id="menu" class="screen">
   <div class="menu-box">
     <img src="skull.png" alt="ZOMBIESHOOT" class="skull-img">
     <h1 class="game-title">ZOMBIE<span class="red">SHOOT</span></h1>
     <p class="tagline">ВЫЖИВИ В ЗОНЕ ЗАРАЖЕНИЯ</p>
-    <div class="version">v8.1 · ALPHA</div>
+    <div class="version">v9.0 · MOBILE</div>
     <button id="startBtn" class="btn-primary">▶ ИГРАТЬ</button>
     <button id="settingsBtn" class="btn-secondary">⚙ НАСТРОЙКИ</button>
   </div>
 </div>
 
-<!-- НАСТРОЙКИ -->
 <div id="settings" class="screen" style="display:none;">
   <div class="settings-box">
     <h2>⚙ НАСТРОЙКИ</h2>
@@ -37,13 +35,13 @@
         <div><kbd>R</kbd><span>Перезарядка</span></div>
         <div><kbd>1 2 3</kbd><span>Оружие</span></div>
         <div><kbd>4</kbd><span>Аптечка</span></div>
-        <div><kbd>F</kbd><span>Подобрать лут</span></div>
+        <div><kbd>F</kbd><span>Лут</span></div>
       </div>
     </div>
 
     <div class="settings-block">
       <h3>ГРАФИКА И ЗВУК</h3>
-      <label>Чувствительность мыши
+      <label>Чувствительность
         <input type="range" id="sensSlider" min="1" max="20" value="5">
       </label>
       <label>Громкость
@@ -56,19 +54,22 @@
           <option value="low">Низкое</option>
         </select>
       </label>
+      <label>FOV (обзор)
+        <input type="range" id="fovSlider" min="60" max="100" value="75">
+      </label>
     </div>
 
     <div class="settings-block">
       <h3>ПРОЧЕЕ</h3>
       <label class="toggle-label">
         <input type="checkbox" id="debugToggle">
-        <span>Показывать отладочную панель</span>
+        <span>Отладочная панель</span>
       </label>
     </div>
 
     <div class="settings-block support-block">
       <h3>ПОДДЕРЖКА</h3>
-      <p class="support-text">Нашли баг, есть идея или вопрос?</p>
+      <p class="support-text">Нашли баг или есть идея?</p>
       <a href="mailto:nemo94314@gmail.com?subject=ZOMBIESHOOT%20—%20Обратная%20связь" class="btn-support">
         ✉ НАПИСАТЬ НА ПОЧТУ
       </a>
@@ -79,7 +80,6 @@
   </div>
 </div>
 
-<!-- HUD -->
 <div id="hud" style="display:none;">
   <div id="score">Счёт: 0 | Волна: 1</div>
   <div id="health">❤️ 100</div>
@@ -91,7 +91,23 @@
   <div id="hitMarker">✖</div>
 </div>
 
-<!-- ЭКРАН СМЕРТИ -->
+<div id="mobileControls">
+  <div id="joystickZone">
+    <div id="joystickBase">
+      <div id="joystickKnob"></div>
+    </div>
+  </div>
+
+  <div id="actionButtons">
+    <button class="mob-btn weapon" id="btnWeapon">🔫</button>
+    <button class="mob-btn medkit" id="btnMedkit">🩹</button>
+    <button class="mob-btn reload" id="btnReload">🔄</button>
+    <button class="mob-btn jump" id="btnJump">⬆</button>
+    <button class="mob-btn pickup" id="btnPickup">🖐</button>
+    <button class="mob-btn shoot" id="btnShoot">🔥</button>
+  </div>
+</div>
+
 <div id="gameover" class="screen" style="display:none;">
   <div class="menu-box">
     <img src="skull.png" alt="ZOMBIESHOOT" class="skull-img small">
@@ -105,30 +121,21 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="game.js"></script>
 <script>
-// ========== ФОН МЕНЮ (чёрный с частицами) ==========
 const bg = document.getElementById('bgCanvas');
 const bctx = bg.getContext('2d');
 function resizeBg(){ bg.width = innerWidth; bg.height = innerHeight; }
-resizeBg();
-addEventListener('resize', resizeBg);
+resizeBg(); addEventListener('resize', resizeBg);
 
-const pts = Array.from({length: 100}, () => ({
-  x: Math.random() * bg.width,
-  y: Math.random() * bg.height,
-  vx: (Math.random() - 0.5) * 0.4,
-  vy: (Math.random() - 0.5) * 0.4,
-  r: Math.random() * 2 + 0.5,
-  a: Math.random() * 0.5 + 0.15
+const pts = Array.from({length: 80}, () => ({
+  x: Math.random() * bg.width, y: Math.random() * bg.height,
+  vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
+  r: Math.random() * 2 + 0.5, a: Math.random() * 0.5 + 0.15
 }));
 
 function drawBG(){
   bctx.fillStyle = '#000';
   bctx.fillRect(0, 0, bg.width, bg.height);
-
-  const g = bctx.createRadialGradient(
-    bg.width / 2, bg.height / 2, 100,
-    bg.width / 2, bg.height / 2, Math.max(bg.width, bg.height) / 1.5
-  );
+  const g = bctx.createRadialGradient(bg.width/2, bg.height/2, 100, bg.width/2, bg.height/2, Math.max(bg.width, bg.height)/1.5);
   g.addColorStop(0, 'rgba(60,0,0,0.15)');
   g.addColorStop(1, 'rgba(0,0,0,0.9)');
   bctx.fillStyle = g;
@@ -138,7 +145,6 @@ function drawBG(){
     p.x += p.vx; p.y += p.vy;
     if (p.x < 0 || p.x > bg.width) p.vx *= -1;
     if (p.y < 0 || p.y > bg.height) p.vy *= -1;
-
     bctx.beginPath();
     bctx.arc(p.x, p.y, p.r, 0, 6.28);
     bctx.fillStyle = `rgba(220,40,40,${p.a})`;
@@ -147,16 +153,11 @@ function drawBG(){
     bctx.fill();
     bctx.shadowBlur = 0;
   });
-
   requestAnimationFrame(drawBG);
 }
 drawBG();
 
-// ========== МЯГКАЯ ФОНОВАЯ МУЗЫКА (без шума) ==========
-let musicCtx = null;
-let musicNodes = [];
-let musicPlaying = false;
-let musicVolume = 0.3;
+let musicCtx = null, musicPlaying = false, musicVolume = 0.3;
 
 function startMusic(){
   if (musicPlaying) return;
@@ -164,80 +165,39 @@ function startMusic(){
     musicCtx = new (window.AudioContext || window.webkitAudioContext)();
     musicPlaying = true;
     playAmbientMusic();
-  } catch(e) { console.warn('Музыка недоступна', e); }
+  } catch(e){}
 }
 
 function playAmbientMusic(){
   if (!musicCtx || musicCtx.state === 'closed') return;
   const now = musicCtx.currentTime;
-
-  // Мягкий аккорд из 3 нот (все sine — без шума)
-  const notes = [110, 164.81, 220]; // A2, E3, A3
-  notes.forEach((freq, i) => {
+  [110, 164.81, 220].forEach((freq, i) => {
     const osc = musicCtx.createOscillator();
     const gain = musicCtx.createGain();
     const filter = musicCtx.createBiquadFilter();
-
     osc.type = 'sine';
     osc.frequency.setValueAtTime(freq, now);
-
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(500, now);
-    filter.Q.setValueAtTime(0.5, now);
-
     gain.gain.setValueAtTime(0, now);
     gain.gain.linearRampToValueAtTime(0.04 * musicVolume, now + 2);
     gain.gain.linearRampToValueAtTime(0, now + 6);
-
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(musicCtx.destination);
-
-    osc.start(now + i * 0.2);
-    osc.stop(now + 6.5);
-    musicNodes.push(osc);
+    osc.connect(filter); filter.connect(gain); gain.connect(musicCtx.destination);
+    osc.start(now + i * 0.2); osc.stop(now + 6.5);
   });
-
-  // Мягкий колокольчик (редко)
-  if (Math.random() > 0.65) {
-    const bell = musicCtx.createOscillator();
-    const bellGain = musicCtx.createGain();
-    bell.type = 'sine';
-    const bellFreq = [440, 523.25, 659.25][Math.floor(Math.random() * 3)];
-    bell.frequency.setValueAtTime(bellFreq, now + 2);
-    bellGain.gain.setValueAtTime(0, now + 2);
-    bellGain.gain.linearRampToValueAtTime(0.025 * musicVolume, now + 2.5);
-    bellGain.gain.exponentialRampToValueAtTime(0.001, now + 5);
-    bell.connect(bellGain);
-    bellGain.connect(musicCtx.destination);
-    bell.start(now + 2);
-    bell.stop(now + 5.5);
-    musicNodes.push(bell);
-  }
-
-  setTimeout(() => {
-    if (musicPlaying) playAmbientMusic();
-  }, 6500);
+  setTimeout(() => { if (musicPlaying) playAmbientMusic(); }, 6500);
 }
 
 function stopMusic(){
   musicPlaying = false;
-  musicNodes.forEach(n => { try { n.stop(); } catch(e){} });
-  musicNodes = [];
-  if (musicCtx) {
-    try { musicCtx.close(); } catch(e){}
-    musicCtx = null;
-  }
+  if (musicCtx) { try { musicCtx.close(); } catch(e){} musicCtx = null; }
 }
 
-// Экспорт для game.js
 window.stopBackgroundMusic = stopMusic;
 window.startBackgroundMusic = startMusic;
 window.setMusicVolume = (v) => { musicVolume = Math.max(0, Math.min(1, v)); };
 
-// ========== КЛИКИ ПО КНОПКАМ МЕНЮ ==========
 document.getElementById('startBtn').addEventListener('click', () => {
-  // Музыка запускается внутри startGame(), но на всякий случай:
   if (!musicPlaying) startMusic();
 });
 </script>

@@ -66,6 +66,7 @@ let score = 0, health = 100, wave = 1, currentLevel = 1;
 let hitsTaken = 0;
 let isGameActive = false;
 let enemies = [], obstacles = [], enemyBullets = [], grenades = [], lootCrates = [], corpses = [], bloodStains = [];
+let particles = []; // ← НОВОЕ: частицы (кровь, гильзы, дым)
 let currentBoss = null, bossMaxHealth = 0;
 let clock = new THREE.Clock();
 let yaw = 0, pitch = 0, recoilPitch = 0;
@@ -271,12 +272,10 @@ function playPickupSound() {
   o.start(now); o.stop(now + 0.22);
 }
 
-// ============ ХЕДШОТЫ (НОВОЕ) ============
+// ============ ХЕДШОТЫ ============
 function playHeadshotSound() {
   if (!audioCtx) return;
   const now = audioCtx.currentTime;
-
-  // "Хруст" — короткий высокий щелчок
   const o1 = audioCtx.createOscillator(), g1 = audioCtx.createGain();
   o1.type = 'square';
   o1.frequency.setValueAtTime(1200, now);
@@ -286,7 +285,6 @@ function playHeadshotSound() {
   o1.connect(g1); g1.connect(audioCtx.destination);
   o1.start(now); o1.stop(now + 0.11);
 
-  // Низкий "бум" для сочности
   const o2 = audioCtx.createOscillator(), g2 = audioCtx.createGain();
   o2.type = 'triangle';
   o2.frequency.setValueAtTime(180, now);
@@ -310,6 +308,137 @@ function showHitmarker(isHead) {
     hm.style.opacity = '0';
     hm.style.transform = 'translate(-50%, -50%) scale(0.8)';
   }, 120);
+}
+
+// ============ СИСТЕМА ЧАСТИЦ (НОВОЕ) ============
+function spawnParticle(pos, velocity, color, size, life, useGravity = true) {
+  const mesh = new THREE.Mesh(
+    new THREE.SphereGeometry(size, 4, 4),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1 })
+  );
+  mesh.position.copy(pos);
+  mesh.userData = {
+    velocity: velocity.clone(),
+    life,
+    maxLife: life,
+    gravity: useGravity
+  };
+  scene.add(mesh);
+  particles.push(mesh);
+}
+
+function createBloodBurst(pos, isHead) {
+  // Брызги крови — мелкие быстрые капли
+  const count = isHead ? 22 : 12;
+  const baseColor = isHead ? 0xbb0000 : 0x880000;
+  for (let i = 0; i < count; i++) {
+    const vel = new THREE.Vector3(
+      (Math.random() - 0.5) * 6,
+      Math.random() * 4 + 1,
+      (Math.random() - 0.5) * 6
+    );
+    const size = 0.035 + Math.random() * 0.055;
+    const life = 0.5 + Math.random() * 0.6;
+    spawnParticle(pos, vel, baseColor, size, life, true);
+  }
+  // Облачко крови — крупные медленные
+  for (let i = 0; i < 5; i++) {
+    const vel = new THREE.Vector3(
+      (Math.random() - 0.5) * 2,
+      Math.random() * 1.5 + 0.3,
+      (Math.random() - 0.5) * 2
+    );
+    spawnParticle(pos, vel, 0x550000, 0.14 + Math.random() * 0.08, 1.0 + Math.random() * 0.4, false);
+  }
+  // Для хедшота — дополнительная вспышка
+  if (isHead) {
+    const flash = new THREE.PointLight(0xff2200, 2, 4);
+    flash.position.copy(pos);
+    scene.add(flash);
+    setTimeout(() => scene.remove(flash), 60);
+  }
+}
+
+function createShellCasing() {
+  if (!weaponGroup) return;
+  const casing = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.014, 0.014, 0.05, 6),
+    new THREE.MeshStandardMaterial({ color: 0xc4a040, metalness: 0.9, roughness: 0.2 })
+  );
+  const worldPos = new THREE.Vector3();
+  weaponGroup.getWorldPosition(worldPos);
+  // Смещаем гильзу чуть вправо и вверх от оружия
+  const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+  const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+  casing.position.copy(worldPos).add(right.clone().multiplyScalar(0.15)).add(up.clone().multiplyScalar(0.05));
+
+  const ejectVel = right.clone().multiplyScalar(1.8 + Math.random() * 0.8);
+  ejectVel.y += 1.5 + Math.random() * 0.8;
+  ejectVel.z += (Math.random() - 0.5) * 0.8;
+
+  casing.userData = {
+    velocity: ejectVel,
+    life: 2.5,
+    maxLife: 2.5,
+    gravity: true,
+    spin: new THREE.Vector3(Math.random() * 25 - 12, Math.random() * 25 - 12, Math.random() * 25 - 12)
+  };
+  scene.add(casing);
+  particles.push(casing);
+}
+
+function createMuzzleSmoke() {
+  if (!weaponGroup) return;
+  const worldPos = new THREE.Vector3();
+  weaponGroup.getWorldPosition(worldPos);
+  const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+  const spawnPos = worldPos.clone().add(forward.clone().multiplyScalar(0.6));
+  for (let i = 0; i < 4; i++) {
+    const vel = new THREE.Vector3(
+      (Math.random() - 0.5) * 1.2,
+      Math.random() * 0.6 + 0.2,
+      (Math.random() - 0.5) * 1.2
+    );
+    spawnParticle(spawnPos, vel, 0x999999, 0.06 + Math.random() * 0.05, 0.7 + Math.random() * 0.3, false);
+  }
+}
+
+function updateParticles(delta) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.userData.life -= delta;
+    if (p.userData.life <= 0) {
+      scene.remove(p);
+      particles.splice(i, 1);
+      continue;
+    }
+    if (p.userData.gravity) {
+      p.userData.velocity.y -= GRAVITY * delta;
+    }
+    p.position.add(p.userData.velocity.clone().multiplyScalar(delta));
+
+    // Столкновение с полом — отскок
+    if (p.userData.gravity && p.position.y < 0.03) {
+      p.position.y = 0.03;
+      p.userData.velocity.y *= -0.3;
+      p.userData.velocity.x *= 0.7;
+      p.userData.velocity.z *= 0.7;
+    }
+
+    // Вращение гильз
+    if (p.userData.spin) {
+      p.rotation.x += p.userData.spin.x * delta;
+      p.rotation.y += p.userData.spin.y * delta;
+      p.rotation.z += p.userData.spin.z * delta;
+    }
+
+    // Плавное угасание
+    const alpha = p.userData.life / p.userData.maxLife;
+    if (p.material) {
+      p.material.opacity = Math.max(0, Math.min(1, alpha));
+      p.material.transparent = true;
+    }
+  }
 }
 
 // ============ ИНИЦИАЛИЗАЦИЯ ============
@@ -508,7 +637,7 @@ function createZombie(isBoss) {
 
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.28 * size, 12, 10), skin);
   head.position.y = 1.45 * size; head.castShadow = true; g.add(head);
-  head.userData.isHead = true; // ← ХЕДШОТ: помечаем голову
+  head.userData.isHead = true;
 
   const eL = new THREE.Mesh(new THREE.SphereGeometry(0.055 * size, 6, 6), glow);
   eL.position.set(-0.11 * size, 1.48 * size, -0.24 * size); g.add(eL);
@@ -570,11 +699,10 @@ let waveEnemiesRemaining = 0;
 let waveSpawnTimer = null;
 let messageTimeout = null;
 
-// ---------- УТИЛИТЫ ----------
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 function randomRange(min, max) { return min + Math.random() * (max - min); }
 
-// ---------- ЗАПУСК ИГРЫ ----------
+// ============ ЗАПУСК ИГРЫ ============
 function startGame(level = 1, survival = null) {
   currentLevel = level;
   survivalMode = survival;
@@ -584,18 +712,13 @@ function startGame(level = 1, survival = null) {
   wave = 1;
   hitsTaken = 0;
   medkits = 2;
-  enemies.forEach(e => scene.remove(e));
-  enemies = [];
-  enemyBullets.forEach(b => scene.remove(b));
-  enemyBullets = [];
-  grenades.forEach(g => scene.remove(g));
-  grenades = [];
-  lootCrates.forEach(l => scene.remove(l));
-  lootCrates = [];
-  corpses.forEach(c => scene.remove(c));
-  corpses = [];
-  bloodStains.forEach(b => scene.remove(b));
-  bloodStains = [];
+  enemies.forEach(e => scene.remove(e)); enemies = [];
+  enemyBullets.forEach(b => scene.remove(b)); enemyBullets = [];
+  grenades.forEach(g => scene.remove(g)); grenades = [];
+  lootCrates.forEach(l => scene.remove(l)); lootCrates = [];
+  corpses.forEach(c => scene.remove(c)); corpses = [];
+  bloodStains.forEach(b => scene.remove(b)); bloodStains = [];
+  particles.forEach(p => scene.remove(p)); particles = [];
   currentBoss = null;
   bossMaxHealth = 0;
   isGameActive = true;
@@ -689,7 +812,7 @@ function gameOver() {
   }, 2500);
 }
 
-// ---------- ОБНОВЛЕНИЕ ВРАГОВ ----------
+// ============ ОБНОВЛЕНИЕ ВРАГОВ ============
 function updateEnemies(delta) {
   if (!isGameActive) return;
   const now = performance.now();
@@ -792,7 +915,7 @@ function throwGrenade(e, target) {
   grenades.push(grenade);
 }
 
-// ---------- ПУЛИ И ГРАНАТЫ ----------
+// ============ ПУЛИ И ГРАНАТЫ ============
 function updateBullets(delta) {
   for (let i = enemyBullets.length - 1; i >= 0; i--) {
     const b = enemyBullets[i];
@@ -845,7 +968,7 @@ function explodeGrenade(pos, damage, radius) {
   setTimeout(() => scene.remove(flash), 100);
 }
 
-// ---------- УРОН И ЗДОРОВЬЕ ----------
+// ============ УРОН И ЗДОРОВЬЕ ============
 function takeDamage(amount) {
   if (!isGameActive) return;
   health -= amount;
@@ -873,19 +996,11 @@ function useMedkit() {
   }
 }
 
-// ---------- ОЧКИ И МОНЕТЫ ----------
-function addScore(points) {
-  score += points;
-  updateHUD();
-}
+// ============ ОЧКИ И МОНЕТЫ ============
+function addScore(points) { score += points; updateHUD(); }
+function addCoins(amount) { PROGRESS.coins += amount; saveProgress(); updateCoinsDisplay(); }
 
-function addCoins(amount) {
-  PROGRESS.coins += amount;
-  saveProgress();
-  updateCoinsDisplay();
-}
-
-// ---------- ЛУТ ----------
+// ============ ЛУТ ============
 function createLootCrate(pos, weaponKey) {
   const crate = new THREE.Mesh(
     new THREE.BoxGeometry(0.6, 0.6, 0.6),
@@ -903,13 +1018,9 @@ function updateLoot(delta) {
   nearLootCrate = null;
   lootCrates.forEach(crate => {
     crate.rotation.y += delta * 2;
-    if (crate.position.distanceTo(playerPos) < 2.5) {
-      nearLootCrate = crate;
-    }
+    if (crate.position.distanceTo(playerPos) < 2.5) nearLootCrate = crate;
   });
-  if (nearLootCrate) {
-    showMessage('Нажмите E чтобы подобрать', 100);
-  }
+  if (nearLootCrate) showMessage('Нажмите E чтобы подобрать', 100);
 }
 
 function pickupLoot() {
@@ -926,7 +1037,7 @@ function pickupLoot() {
   updateHUD();
 }
 
-// ---------- ТРУПЫ И КРОВЬ ----------
+// ============ ТРУПЫ И КРОВЬ ============
 function createCorpse(enemy) {
   const corpse = enemy.clone();
   corpse.rotation.x = Math.PI / 2;
@@ -956,27 +1067,29 @@ function createBloodStain(pos) {
   }, 15000);
 }
 
-// ---------- СТРЕЛЬБА ИГРОКА ----------
+// ============ СТРЕЛЬБА ИГРОКА ============
 function shoot() {
   if (!isGameActive || reloading) return;
   const w = WEAPONS[currentWeapon];
   const now = performance.now();
   if (now - lastShotTime < w.cooldown) return;
-  if (w.ammo <= 0) {
-    reload();
-    return;
-  }
+  if (w.ammo <= 0) { reload(); return; }
   lastShotTime = now;
   w.ammo--;
   playShootSoundEnhanced();
   recoilPitch = 0.02 + Math.random() * 0.02;
   shakeAmount = Math.min(1, shakeAmount + 0.1);
 
+  // Muzzle flash
   const flash = weaponGroup?.userData?.flash;
   if (flash) {
     flash.intensity = 3;
     setTimeout(() => { flash.intensity = 0; }, 50);
   }
+
+  // Частицы: дым из ствола и гильза
+  createMuzzleSmoke();
+  createShellCasing();
 
   const pellets = w.pellets || 1;
   for (let i = 0; i < pellets; i++) {
@@ -995,11 +1108,14 @@ function shoot() {
       let enemyObj = hit.object;
       while (enemyObj.parent && !enemies.includes(enemyObj)) enemyObj = enemyObj.parent;
       if (enemies.includes(enemyObj)) {
-        // ============ ХЕДШОТ-ЛОГИКА ============
         const isHead = hit.object.userData && hit.object.userData.isHead === true;
         const multiplier = isHead ? 3 : 1;
         enemyObj.userData.health -= w.damage * multiplier;
         playHitSoundEnhanced();
+
+        // КРОВЬ при попадании
+        createBloodBurst(hit.point, isHead);
+
         if (isHead) {
           playHeadshotSound();
           addScore(25);
@@ -1013,6 +1129,16 @@ function shoot() {
       const wallIntersects = raycaster.intersectObjects(obstacles, true);
       if (wallIntersects.length > 0) {
         createBulletHole(wallIntersects[0].point, wallIntersects[0].face.normal);
+        // Пыль от попадания в стену
+        const wp = wallIntersects[0].point;
+        for (let j = 0; j < 6; j++) {
+          const vel = new THREE.Vector3(
+            (Math.random() - 0.5) * 3,
+            Math.random() * 2 + 0.5,
+            (Math.random() - 0.5) * 3
+          );
+          spawnParticle(wp, vel, 0xaaaaaa, 0.04, 0.5, true);
+        }
       }
     }
   }
@@ -1052,7 +1178,7 @@ function switchWeapon(key) {
   updateHUD();
 }
 
-// ---------- УПРАВЛЕНИЕ ----------
+// ============ УПРАВЛЕНИЕ ============
 function setupControls() {
   document.addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
@@ -1101,9 +1227,7 @@ function setupControls() {
     if (e.button === 0) isMouseDown = false;
   });
 
-  if (isMobile) {
-    setupMobileControls();
-  }
+  if (isMobile) setupMobileControls();
 }
 
 function jump() {
@@ -1177,14 +1301,12 @@ function setupMobileControls() {
 
   lookZone.addEventListener('touchend', (e) => {
     for (const t of e.changedTouches) {
-      if (t.identifier === lookTouchId) {
-        lookTouchId = null;
-      }
+      if (t.identifier === lookTouchId) lookTouchId = null;
     }
   }, { passive: true });
 }
 
-// ---------- ОБНОВЛЕНИЕ ИГРОКА ----------
+// ============ ОБНОВЛЕНИЕ ИГРОКА ============
 function updatePlayer(delta) {
   if (!isGameActive) return;
   const speed = 5.0 * (isMobile ? 0.8 : 1);
@@ -1259,7 +1381,7 @@ function updatePlayer(delta) {
   footstepTimer -= delta;
 }
 
-// ---------- АНИМАЦИЯ ----------
+// ============ АНИМАЦИЯ ============
 function animate() {
   requestAnimationFrame(animate);
   const delta = Math.min(clock.getDelta(), 0.1);
@@ -1269,6 +1391,7 @@ function animate() {
     updateEnemies(delta);
     updateBullets(delta);
     updateLoot(delta);
+    updateParticles(delta); // ← НОВОЕ
   }
 
   if (isMouseDown && isGameActive) {
@@ -1278,14 +1401,11 @@ function animate() {
 
   if (isGameActive && performance.now() % 100 < 20) updateHUD();
 
-  if (composer) {
-    composer.render();
-  } else {
-    renderer.render(scene, camera);
-  }
+  if (composer) composer.render();
+  else renderer.render(scene, camera);
 }
 
-// ---------- UI ----------
+// ============ UI ============
 function setupUI() {
   if (!document.getElementById('hud')) {
     const hud = document.createElement('div');
@@ -1440,7 +1560,7 @@ function toggleHorrorMode() {
   if (isGameActive) buildLevelEnvironment(currentLevel);
 }
 
-// ---------- ЗАПУСК ----------
+// ============ ЗАПУСК ============
 window.addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();

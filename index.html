@@ -9,55 +9,59 @@
 <body>
 <canvas id="bgCanvas"></canvas>
 
-<div id="menu">
-  <div class="menu-content">
-    <div class="logo">💀</div>
+<!-- МЕНЮ -->
+<div id="menu" class="screen">
+  <div class="menu-box">
+    <img src="skull.png" alt="ZOMBIESHOOT" class="skull-img">
+
     <h1 class="game-title">ZOMBIE<span class="red">SHOOT</span></h1>
-    <p class="tagline">Выживи. Уничтожь. Не сдавайся.</p>
-    <div class="version">v4.0 · Alpha</div>
+    <p class="tagline">ВЫЖИВИ В ЗОНЕ ЗАРАЖЕНИЯ</p>
+    <div class="version">v5.0 · ALPHA</div>
 
     <button id="startBtn" class="btn-primary">▶ ИГРАТЬ</button>
-
     <button id="settingsBtn" class="btn-secondary">⚙ НАСТРОЙКИ</button>
+  </div>
+</div>
 
-    <div class="controls">
-      <div class="controls-title">УПРАВЛЕНИЕ</div>
-      <div class="control-grid">
-        <div><span class="key">WASD</span><span>Движение</span></div>
-        <div><span class="key">МЫШЬ</span><span>Обзор</span></div>
-        <div><span class="key">ЛКМ</span><span>Выстрел</span></div>
-        <div><span class="key">SPACE</span><span>Прыжок</span></div>
-        <div><span class="key">R</span><span>Перезарядка</span></div>
-        <div><span class="key">1 2 3</span><span>Оружие</span></div>
+<!-- НАСТРОЙКИ -->
+<div id="settings" class="screen" style="display:none;">
+  <div class="settings-box">
+    <h2>⚙ НАСТРОЙКИ</h2>
+
+    <div class="settings-block">
+      <h3>УПРАВЛЕНИЕ</h3>
+      <div class="ctrl-grid">
+        <div><kbd>W A S D</kbd><span>Движение</span></div>
+        <div><kbd>МЫШЬ</kbd><span>Обзор</span></div>
+        <div><kbd>ЛКМ</kbd><span>Выстрел</span></div>
+        <div><kbd>SPACE</kbd><span>Прыжок</span></div>
+        <div><kbd>R</kbd><span>Перезарядка</span></div>
+        <div><kbd>1 2 3</kbd><span>Оружие</span></div>
       </div>
     </div>
+
+    <div class="settings-block">
+      <h3>ГРАФИКА И ЗВУК</h3>
+      <label>Чувствительность мыши
+        <input type="range" id="sensSlider" min="1" max="20" value="5">
+      </label>
+      <label>Громкость
+        <input type="range" id="volSlider" min="0" max="100" value="70">
+      </label>
+      <label>Качество
+        <select id="qualitySelect">
+          <option value="high">Высокое</option>
+          <option value="medium" selected>Среднее</option>
+          <option value="low">Низкое</option>
+        </select>
+      </label>
+    </div>
+
+    <button id="closeSettings" class="btn-primary">← НАЗАД</button>
   </div>
 </div>
 
-<!-- Настройки -->
-<div id="settings" style="display:none;">
-  <div class="settings-panel">
-    <h2>⚙ НАСТРОЙКИ</h2>
-    <div class="setting-row">
-      <label>Чувствительность мыши</label>
-      <input type="range" id="sensSlider" min="1" max="20" value="5">
-    </div>
-    <div class="setting-row">
-      <label>Громкость</label>
-      <input type="range" id="volSlider" min="0" max="100" value="70">
-    </div>
-    <div class="setting-row">
-      <label>Качество графики</label>
-      <select id="qualitySelect">
-        <option value="high">Высокое</option>
-        <option value="medium" selected>Среднее</option>
-        <option value="low">Низкое</option>
-      </select>
-    </div>
-    <button id="closeSettings" class="btn-primary">ЗАКРЫТЬ</button>
-  </div>
-</div>
-
+<!-- HUD -->
 <div id="hud" style="display:none;">
   <div id="score">Счёт: 0 | Волна: 1</div>
   <div id="health">❤️ 100</div>
@@ -66,10 +70,13 @@
   <div id="damageVignette"></div>
 </div>
 
-<div id="gameover" style="display:none;">
-  <div class="menu-content">
-    <h1 class="death-title">💀 ТЫ ПОГИБ</h1>
-    <p class="final-score-label">Твой результат</p>
+<!-- ЭКРАН СМЕРТИ -->
+<div id="gameover" class="screen" style="display:none;">
+  <div class="menu-box">
+    <img src="skull.png" alt="ZOMBIESHOOT" class="skull-img small">
+
+    <h1 class="death-title">ТЫ ПОГИБ</h1>
+    <p class="final-score-label">ТВОЙ РЕЗУЛЬТАТ</p>
     <p class="final-score-value"><span id="finalScore">0</span></p>
     <button id="restartBtn" class="btn-primary">🔄 ЗАНОВО</button>
   </div>
@@ -78,27 +85,33 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="game.js"></script>
 <script>
-// Фоновые частицы
+// Фоновые частицы (только для меню)
 const bg = document.getElementById('bgCanvas');
 const bctx = bg.getContext('2d');
 function resize(){ bg.width = innerWidth; bg.height = innerHeight; }
 resize(); addEventListener('resize', resize);
+
 const pts = Array.from({length: 100}, () => ({
   x: Math.random()*bg.width, y: Math.random()*bg.height,
-  vx:(Math.random()-0.5)*0.4, vy:(Math.random()-0.5)*0.4,
+  vx: (Math.random()-0.5)*0.4, vy: (Math.random()-0.5)*0.4,
   r: Math.random()*2+0.5, a: Math.random()*0.4+0.1
 }));
+
 function drawBG(){
   bctx.fillStyle = '#07080f';
-  bctx.fillRect(0,0,bg.width,bg.height);
+  bctx.fillRect(0, 0, bg.width, bg.height);
+
   pts.forEach(p => {
     p.x += p.vx; p.y += p.vy;
-    if(p.x<0||p.x>bg.width) p.vx*=-1;
-    if(p.y<0||p.y>bg.height) p.vy*=-1;
+    if (p.x < 0 || p.x > bg.width) p.vx *= -1;
+    if (p.y < 0 || p.y > bg.height) p.vy *= -1;
     bctx.beginPath();
     bctx.arc(p.x, p.y, p.r, 0, 6.28);
     bctx.fillStyle = `rgba(200,40,40,${p.a})`;
+    bctx.shadowColor = '#ff0033';
+    bctx.shadowBlur = 8;
     bctx.fill();
+    bctx.shadowBlur = 0;
   });
   requestAnimationFrame(drawBG);
 }

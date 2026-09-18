@@ -1,4 +1,4 @@
-// ============ ZOMBIESHOOT v11.0 — 8 LEVELS ============
+// ============ ZOMBIESHOOT v12.0 — HORROR ============
 
 const DEFAULT_PROGRESS = {
   coins: 0,
@@ -20,24 +20,23 @@ let PROGRESS = loadProgress();
 
 function loadProgress() {
   try {
-    const s = localStorage.getItem('zombieshoot_progress_v11');
+    const s = localStorage.getItem('zombieshoot_progress_v12');
     if (s) return Object.assign(JSON.parse(JSON.stringify(DEFAULT_PROGRESS)), JSON.parse(s));
   } catch(e) {}
   return JSON.parse(JSON.stringify(DEFAULT_PROGRESS));
 }
-function saveProgress() { try { localStorage.setItem('zombieshoot_progress_v11', JSON.stringify(PROGRESS)); } catch(e) {} }
+function saveProgress() { try { localStorage.setItem('zombieshoot_progress_v12', JSON.stringify(PROGRESS)); } catch(e) {} }
 function resetProgress() { PROGRESS = JSON.parse(JSON.stringify(DEFAULT_PROGRESS)); saveProgress(); updateCoinsDisplay(); renderLevelGrid(); }
 
-// ============ 8 УРОВНЕЙ ============
 const LEVELS = {
-  1: { name:'Лагерь',     icon:'⛺', waves:1, boss:false, maxEnemies:5,  enemySpeed:1.2, enemyHealth:30,  enemyDamage:0.5, shooterChance:0.3, grenadierChance:0.05, theme:'grass',  fog:0x87a5c4, sky:0x87a5c4 },
-  2: { name:'Лес',        icon:'🌲', waves:2, boss:false, maxEnemies:7,  enemySpeed:1.4, enemyHealth:45,  enemyDamage:0.6, shooterChance:0.4, grenadierChance:0.10, theme:'forest', fog:0x4a6a4a, sky:0x6a8a6a },
-  3: { name:'Деревня',    icon:'🏘️', waves:3, boss:false, maxEnemies:9,  enemySpeed:1.6, enemyHealth:60,  enemyDamage:0.7, shooterChance:0.5, grenadierChance:0.15, theme:'village',fog:0x8a7a5a, sky:0xa89a7a },
-  4: { name:'Пустыня',    icon:'🏜️', waves:4, boss:false, maxEnemies:11, enemySpeed:1.8, enemyHealth:75,  enemyDamage:0.8, shooterChance:0.6, grenadierChance:0.20, theme:'desert', fog:0xd4b878, sky:0xe8d0a0 },
-  5: { name:'Завод',      icon:'🏭', waves:5, boss:false, maxEnemies:12, enemySpeed:1.9, enemyHealth:90,  enemyDamage:0.9, shooterChance:0.6, grenadierChance:0.25, theme:'factory',fog:0x6a6a7a, sky:0x8a8a9a },
-  6: { name:'Метро',      icon:'🚇', waves:6, boss:false, maxEnemies:13, enemySpeed:2.0, enemyHealth:110, enemyDamage:1.0, shooterChance:0.65, grenadierChance:0.3, theme:'metro',  fog:0x2a2a3a, sky:0x1a1a2a },
-  7: { name:'Лаборатория',icon:'🧪', waves:7, boss:false, maxEnemies:14, enemySpeed:2.1, enemyHealth:130, enemyDamage:1.2, shooterChance:0.7, grenadierChance:0.35, theme:'lab',    fog:0x4a8a6a, sky:0x6aaa8a },
-  8: { name:'Логово Босса',icon:'💀',waves:8, boss:true,  maxEnemies:15, enemySpeed:2.3, enemyHealth:150, enemyDamage:1.4, shooterChance:0.7, grenadierChance:0.4, theme:'lair',   fog:0x4a0000, sky:0x2a0000 }
+  1: { name:'Лагерь',      icon:'⛺', waves:1, boss:false, maxEnemies:5,  enemySpeed:1.2, enemyHealth:30,  enemyDamage:0.5, shooterChance:0.3, grenadierChance:0.05, theme:'grass',  sky:0x0a0a1a, fog:0x050510, fogNear:8,  fogFar:40, ambient:0.08 },
+  2: { name:'Лес',         icon:'🌲', waves:2, boss:false, maxEnemies:7,  enemySpeed:1.4, enemyHealth:45,  enemyDamage:0.6, shooterChance:0.4, grenadierChance:0.10, theme:'forest', sky:0x050a05, fog:0x030803, fogNear:6,  fogFar:35, ambient:0.06 },
+  3: { name:'Деревня',     icon:'🏘️', waves:3, boss:false, maxEnemies:9,  enemySpeed:1.6, enemyHealth:60,  enemyDamage:0.7, shooterChance:0.5, grenadierChance:0.15, theme:'village',sky:0x1a0a05, fog:0x0a0503, fogNear:7,  fogFar:38, ambient:0.07 },
+  4: { name:'Пустыня',     icon:'🏜️', waves:4, boss:false, maxEnemies:11, enemySpeed:1.8, enemyHealth:75,  enemyDamage:0.8, shooterChance:0.6, grenadierChance:0.20, theme:'desert', sky:0x2a1a05, fog:0x1a1005, fogNear:10, fogFar:50, ambient:0.15 },
+  5: { name:'Завод',       icon:'🏭', waves:5, boss:false, maxEnemies:12, enemySpeed:1.9, enemyHealth:90,  enemyDamage:0.9, shooterChance:0.6, grenadierChance:0.25, theme:'factory',sky:0x0a0a0a, fog:0x050505, fogNear:5,  fogFar:30, ambient:0.05 },
+  6: { name:'Метро',       icon:'🚇', waves:6, boss:false, maxEnemies:13, enemySpeed:2.0, enemyHealth:110, enemyDamage:1.0, shooterChance:0.65, grenadierChance:0.3, theme:'metro',  sky:0x000000, fog:0x000000, fogNear:4,  fogFar:22, ambient:0.03 },
+  7: { name:'Лаборатория', icon:'🧪', waves:7, boss:false, maxEnemies:14, enemySpeed:2.1, enemyHealth:130, enemyDamage:1.2, shooterChance:0.7, grenadierChance:0.35, theme:'lab',    sky:0x001a10, fog:0x000a05, fogNear:5,  fogFar:28, ambient:0.06 },
+  8: { name:'Логово Босса',icon:'💀', waves:8, boss:true,  maxEnemies:15, enemySpeed:2.3, enemyHealth:150, enemyDamage:1.4, shooterChance:0.7, grenadierChance:0.4, theme:'lair',   sky:0x1a0000, fog:0x0a0000, fogNear:4,  fogFar:25, ambient:0.05 }
 };
 
 const WEAPONS = {
@@ -50,13 +49,13 @@ const WEAPONS = {
 };
 
 const SKINS = {
-  default:  { name:'Новобранец', body:0x4a6b3a, head:0x7a9a4a, cost:0 },
-  soldier:  { name:'Солдат',     body:0x556b3a, head:0x8aaa5a, cost:200 },
-  commando: { name:'Коммандос',  body:0x2a3a2a, head:0x5a7a3a, cost:500 },
-  ghost:    { name:'Призрак',    body:0x888888, head:0xcccccc, cost:1000 }
+  default:  { name:'Новобранец', body:0x3a4a2a, head:0x5a6a3a, cost:0 },
+  soldier:  { name:'Солдат',     body:0x2a3a2a, head:0x4a5a2a, cost:200 },
+  commando: { name:'Коммандос',  body:0x1a1a1a, head:0x3a3a2a, cost:500 },
+  ghost:    { name:'Призрак',    body:0x666666, head:0x999999, cost:1000 }
 };
 
-let scene, camera, renderer;
+let scene, camera, renderer, composer;
 let score = 0, health = 100, wave = 1, currentLevel = 1;
 let hitsTaken = 0;
 let isGameActive = false;
@@ -65,6 +64,9 @@ let currentBoss = null, bossMaxHealth = 0;
 let clock = new THREE.Clock();
 let yaw = 0, pitch = 0, recoilPitch = 0;
 let verticalVelocity = 0, playerY = 1.7, isJumping = false;
+let bobPhase = 0;
+let breathPhase = 0;
+let shakeAmount = 0;
 const GRAVITY = 22, JUMP_POWER = 8;
 let MOUSE_SENSITIVITY = 0.002, volume = 0.4, medkits = 2;
 const MAX_MEDKITS = 5;
@@ -76,34 +78,78 @@ let lookTouchId = null, lookLastX = 0, lookLastY = 0;
 
 let currentWeapon = 'rifle';
 let reloading = false, lastShotTime = 0, isMouseDown = false;
-let weaponGroup = null, audioCtx = null;
+let weaponGroup = null, flashlight = null, audioCtx = null;
 let debugMode = false, nearLootCrate = null;
+let filmPass = null, vignettePass = null;
 const keys = { w:false, a:false, s:false, d:false };
 
 // ============ ИНИЦИАЛИЗАЦИЯ ============
 function init() {
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x87a5c4);
-  scene.fog = new THREE.Fog(0x87a5c4, 60, 130);
+  scene.background = new THREE.Color(0x050510);
+  scene.fog = new THREE.Fog(0x050510, 8, 40);
+
   const fov = isMobile ? 85 : 75;
   camera = new THREE.PerspectiveCamera(fov, innerWidth/innerHeight, 0.1, 300);
   camera.position.set(0, playerY, 0);
   scene.add(camera);
 
-  renderer = new THREE.WebGLRenderer({ antialias: !isMobile });
+  renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: 'high-performance' });
   renderer.setSize(innerWidth, innerHeight);
   renderer.setPixelRatio(isMobile ? 1 : Math.min(devicePixelRatio, 2));
   renderer.shadowMap.enabled = !isMobile;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 0.8;
   renderer.domElement.style.position = 'fixed';
   renderer.domElement.style.inset = '0';
   renderer.domElement.style.zIndex = '1';
   document.body.appendChild(renderer.domElement);
 
-  scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-  const sun = new THREE.DirectionalLight(0xfff0d0, 1);
-  sun.position.set(40, 60, 20);
-  sun.castShadow = !isMobile;
-  scene.add(sun);
+  // Пост-обработка (только если EffectComposer загружен)
+  if (typeof THREE.EffectComposer !== 'undefined') {
+    try {
+      composer = new THREE.EffectComposer(renderer);
+      composer.addPass(new THREE.RenderPass(scene, camera));
+
+      // Зерно плёнки
+      if (THREE.FilmShader) {
+        filmPass = new THREE.ShaderPass(THREE.FilmShader);
+        filmPass.uniforms['grayscale'].value = 0;
+        filmPass.uniforms['nIntensity'].value = 0.15;
+        filmPass.uniforms['sIntensity'].value = 0.1;
+        filmPass.uniforms['sCount'].value = 800;
+        filmPass.renderToScreen = false;
+        composer.addPass(filmPass);
+      }
+
+      // Виньетка
+      if (THREE.VignetteShader) {
+        vignettePass = new THREE.ShaderPass(THREE.VignetteShader);
+        vignettePass.uniforms['offset'].value = 1.0;
+        vignettePass.uniforms['darkness'].value = 1.4;
+        vignettePass.renderToScreen = true;
+        composer.addPass(vignettePass);
+      }
+    } catch(e) { composer = null; console.warn('Post-processing off'); }
+  }
+
+  // Свет: минимальный ambient
+  scene.add(new THREE.AmbientLight(0x223344, 0.15));
+  const hemi = new THREE.HemisphereLight(0x223344, 0x000000, 0.1);
+  scene.add(hemi);
+
+  // Фонарик в руках игрока
+  flashlight = new THREE.SpotLight(0xfff2d0, 1.5, 25, Math.PI/7, 0.4, 1.5);
+  flashlight.position.set(0, 0, 0);
+  flashlight.target.position.set(0, 0, -1);
+  camera.add(flashlight);
+  camera.add(flashlight.target);
+
+  // Слабое свечение вокруг игрока (ambient bubble)
+  const playerLight = new THREE.PointLight(0x4466aa, 0.4, 8);
+  playerLight.position.set(0, 0.5, 0);
+  camera.add(playerLight);
 
   buildLevelEnvironment(1);
 
@@ -113,16 +159,19 @@ function init() {
   setupUI();
   renderLevelGrid();
   updateCoinsDisplay();
+  scheduleZombieSounds();
 }
 
-// ============ ОКРУЖЕНИЕ УРОВНЯ ============
+// ============ ОКРУЖЕНИЕ ============
 function clearLevelEnvironment() {
-  // Удаляем всё из прошлого уровня кроме камеры и света
   for (let i = scene.children.length - 1; i >= 0; i--) {
     const child = scene.children[i];
     if (child === camera) continue;
-    if (child.isLight) continue;
-    if (child.type === 'AmbientLight' || child.type === 'DirectionalLight' || child.type === 'HemisphereLight') continue;
+    if (child.isLight && child.type !== 'SpotLight') continue;
+    if (child === flashlight) continue;
+    if (child.isLight) {
+      if (child === flashlight || child === flashlight.target) continue;
+    }
     scene.remove(child);
   }
   obstacles = [];
@@ -133,30 +182,61 @@ function buildLevelEnvironment(levelNum) {
   clearLevelEnvironment();
   const lvl = LEVELS[levelNum];
   scene.background = new THREE.Color(lvl.sky);
-  scene.fog = new THREE.Fog(lvl.fog, 40, 120);
+  scene.fog = new THREE.Fog(lvl.fog, lvl.fogNear, lvl.fogFar);
+  scene.fog.density = 0.15;
 
-  // Небо-сфера
+  // Звёздное небо (для уровней, где видно)
+  if (lvl.theme === 'grass' || lvl.theme === 'forest' || lvl.theme === 'desert') {
+    const starsGeo = new THREE.BufferGeometry();
+    const starsPositions = [];
+    for (let i = 0; i < 800; i++) {
+      const r = 150;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.random() * Math.PI * 0.4;
+      starsPositions.push(r * Math.sin(phi) * Math.cos(theta), r * Math.cos(phi) + 30, r * Math.sin(phi) * Math.sin(theta));
+    }
+    starsGeo.setAttribute('position', new THREE.Float32BufferAttribute(starsPositions, 3));
+    const starsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.8, transparent: true, opacity: 0.8 });
+    scene.add(new THREE.Points(starsGeo, starsMat));
+  }
+
+  // Купол-сфера (небо)
   const sky = new THREE.Mesh(new THREE.SphereGeometry(150, 32, 16), new THREE.MeshBasicMaterial({ color: lvl.sky, side: THREE.BackSide, fog: false }));
   scene.add(sky);
 
-  // Земля по теме уровня
+  // Луна (для открытых уровней)
+  if (lvl.theme === 'grass' || lvl.theme === 'forest') {
+    const moonLight = new THREE.DirectionalLight(0x8899cc, 0.25);
+    moonLight.position.set(-30, 40, -20);
+    scene.add(moonLight);
+  }
+
+  // Земля — тёмная, шероховатая
   const groundColors = {
-    grass: 0x4a6b3a, forest: 0x2a4a2a, village: 0x6a5a3a, desert: 0xc4a868,
-    factory: 0x5a5a5a, metro: 0x2a2a2e, lab: 0x3a5a4a, lair: 0x3a0a0a
+    grass: 0x1a2a15, forest: 0x0a1a0a, village: 0x2a1a0a, desert: 0x4a3a1a,
+    factory: 0x1a1a1a, metro: 0x0a0a0a, lab: 0x0a1a15, lair: 0x1a0000
   };
-  const groundColor = groundColors[lvl.theme] || 0x4a6b3a;
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({ color: groundColor, roughness: 1 }));
+  const groundColor = groundColors[lvl.theme] || 0x1a2a15;
+  const groundGeo = new THREE.PlaneGeometry(100, 100, 40, 40);
+  // Небольшая неровность
+  const posAttr = groundGeo.attributes.position;
+  for (let i = 0; i < posAttr.count; i++) {
+    const x = posAttr.getX(i), y = posAttr.getY(i);
+    posAttr.setZ(i, Math.sin(x*0.3)*Math.cos(y*0.3)*0.15);
+  }
+  groundGeo.computeVertexNormals();
+  const ground = new THREE.Mesh(groundGeo, new THREE.MeshStandardMaterial({ color: groundColor, roughness: 1, metalness: 0 }));
   ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
 
-  // Стены вокруг
+  // Стены вокруг (высокие, тёмные)
   const wallColors = {
-    grass: 0x5a5a5a, forest: 0x3a2a1a, village: 0x8a7a5a, desert: 0xa8885a,
-    factory: 0x4a4a4a, metro: 0x1a1a2a, lab: 0x4a6a5a, lair: 0x4a0000
+    grass: 0x1a1a1a, forest: 0x0a0a05, village: 0x2a1a0a, desert: 0x3a2a1a,
+    factory: 0x0a0a0a, metro: 0x050505, lab: 0x0a2a1a, lair: 0x1a0000
   };
-  const wallMat = new THREE.MeshStandardMaterial({ color: wallColors[lvl.theme] || 0x5a5a5a });
+  const wallMat = new THREE.MeshStandardMaterial({ color: wallColors[lvl.theme] || 0x1a1a1a, roughness: 1 });
   [
-    { pos:[0,3,-48], size:[96,6,1] }, { pos:[0,3,48], size:[96,6,1] },
-    { pos:[-48,3,0], size:[1,6,96] }, { pos:[48,3,0], size:[1,6,96] }
+    { pos:[0,5,-48], size:[96,10,1] }, { pos:[0,5,48], size:[96,10,1] },
+    { pos:[-48,5,0], size:[1,10,96] }, { pos:[48,5,0], size:[1,10,96] }
   ].forEach(w => {
     const wall = new THREE.Mesh(new THREE.BoxGeometry(...w.size), wallMat);
     wall.position.set(...w.pos); wall.castShadow = true; wall.receiveShadow = true;
@@ -164,7 +244,7 @@ function buildLevelEnvironment(levelNum) {
     scene.add(wall); obstacles.push(wall);
   });
 
-  // Добавляем декор по теме
+  // Декор по теме
   if (lvl.theme === 'forest') addForestDecor();
   else if (lvl.theme === 'village') addVillageDecor();
   else if (lvl.theme === 'desert') addDesertDecor();
@@ -175,58 +255,72 @@ function buildLevelEnvironment(levelNum) {
   else addGrassDecor();
 }
 
+// ============ ДЕКОР ============
 function addGrassDecor() {
-  // Трава-инстансы
   const gGeo = new THREE.PlaneGeometry(0.5, 1);
-  const gMat = new THREE.MeshStandardMaterial({ color: 0x5a8a3a, side: THREE.DoubleSide });
-  const grass = new THREE.InstancedMesh(gGeo, gMat, 400);
+  const gMat = new THREE.MeshStandardMaterial({ color: 0x1a3a1a, side: THREE.DoubleSide, roughness: 1 });
+  const grass = new THREE.InstancedMesh(gGeo, gMat, 500);
   const d = new THREE.Object3D();
-  for (let i = 0; i < 400; i++) {
+  for (let i = 0; i < 500; i++) {
     d.position.set((Math.random()-0.5)*180, 0.5, (Math.random()-0.5)*180);
     d.rotation.y = Math.random()*Math.PI;
     d.scale.setScalar(0.6 + Math.random()*0.8);
     d.updateMatrix(); grass.setMatrixAt(i, d.matrix);
   }
   scene.add(grass);
-  addObstacleCubes(0x6a552a);
+  // Могильные камни (атмосфера)
+  const tombMat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 1 });
+  for (let i = 0; i < 20; i++) {
+    const t = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 0.3), tombMat);
+    t.position.set((Math.random()-0.5)*80, 1, (Math.random()-0.5)*80);
+    t.rotation.y = Math.random()*0.3 - 0.15;
+    t.rotation.z = (Math.random()-0.5)*0.1;
+    t.castShadow = true;
+    scene.add(t);
+  }
+  addObstacleCubes(0x3a2a1a);
 }
 
 function addForestDecor() {
-  // Деревья — конус + цилиндр
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 60; i++) {
     const tree = new THREE.Group();
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 3, 6), new THREE.MeshStandardMaterial({ color: 0x3a2a1a }));
-    trunk.position.y = 1.5; trunk.castShadow = true; tree.add(trunk);
-    const leaves = new THREE.Mesh(new THREE.ConeGeometry(2.5, 5, 8), new THREE.MeshStandardMaterial({ color: 0x2a5a2a }));
-    leaves.position.y = 5; leaves.castShadow = true; tree.add(leaves);
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.4, 4, 5), new THREE.MeshStandardMaterial({ color: 0x1a0a05, roughness: 1 }));
+    trunk.position.y = 2; trunk.castShadow = true; tree.add(trunk);
+    const leaves = new THREE.Mesh(new THREE.ConeGeometry(2.2, 6, 6), new THREE.MeshStandardMaterial({ color: 0x0a2a0a, roughness: 1 }));
+    leaves.position.y = 6.5; leaves.castShadow = true; tree.add(leaves);
     const x = (Math.random()-0.5)*85;
     const z = (Math.random()-0.5)*85;
     if (Math.abs(x) < 10 && Math.abs(z) < 10) continue;
     tree.position.set(x, 0, z);
-    tree.userData.size = { x: 2, y: 6, z: 2 };
+    tree.userData.size = { x: 2, y: 7, z: 2 };
     scene.add(tree);
-    if (Math.random() > 0.5) obstacles.push(tree);
+    if (Math.random() > 0.3) obstacles.push(tree);
   }
-  addObstacleCubes(0x4a3a2a);
+  addObstacleCubes(0x1a0a05);
 }
 
 function addVillageDecor() {
-  // Домики
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 15; i++) {
     const house = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.BoxGeometry(6, 4, 6), new THREE.MeshStandardMaterial({ color: 0x8a6a4a }));
+    const body = new THREE.Mesh(new THREE.BoxGeometry(6, 4, 6), new THREE.MeshStandardMaterial({ color: 0x1a0a05, roughness: 1 }));
     body.position.y = 2; body.castShadow = true; body.receiveShadow = true; house.add(body);
-    const roof = new THREE.Mesh(new THREE.ConeGeometry(5, 3, 4), new THREE.MeshStandardMaterial({ color: 0x6a2a2a }));
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(5, 3, 4), new THREE.MeshStandardMaterial({ color: 0x0a0505, roughness: 1 }));
     roof.position.y = 5.5; roof.rotation.y = Math.PI/4; roof.castShadow = true; house.add(roof);
-    const angle = (i / 12) * Math.PI * 2;
+    // Окна (светящиеся)
+    const winMat = new THREE.MeshBasicMaterial({ color: 0xcc4400 });
+    for (let w = 0; w < 2; w++) {
+      const win = new THREE.Mesh(new THREE.BoxGeometry(1, 1.5, 0.1), winMat);
+      win.position.set(-1.5 + w*3, 2, 3.05);
+      house.add(win);
+    }
+    const angle = (i / 15) * Math.PI * 2;
     const radius = 25 + Math.random() * 15;
     house.position.set(Math.cos(angle)*radius, 0, Math.sin(angle)*radius);
     house.userData.size = { x: 6, y: 4, z: 6 };
     scene.add(house); obstacles.push(house);
   }
-  // Заборчики
-  const fenceMat = new THREE.MeshStandardMaterial({ color: 0x5a3a1a });
-  for (let i = 0; i < 20; i++) {
+  const fenceMat = new THREE.MeshStandardMaterial({ color: 0x1a0a05 });
+  for (let i = 0; i < 30; i++) {
     const fence = new THREE.Mesh(new THREE.BoxGeometry(2, 1.5, 0.2), fenceMat);
     fence.position.set((Math.random()-0.5)*80, 0.75, (Math.random()-0.5)*80);
     fence.rotation.y = Math.random() * Math.PI;
@@ -235,13 +329,12 @@ function addVillageDecor() {
 }
 
 function addDesertDecor() {
-  // Кактусы
-  for (let i = 0; i < 25; i++) {
+  for (let i = 0; i < 30; i++) {
     const cactus = new THREE.Group();
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 4, 8), new THREE.MeshStandardMaterial({ color: 0x3a6a2a }));
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 4, 6), new THREE.MeshStandardMaterial({ color: 0x2a4a1a, roughness: 1 }));
     trunk.position.y = 2; trunk.castShadow = true; cactus.add(trunk);
     if (Math.random() > 0.5) {
-      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 1.5, 6), new THREE.MeshStandardMaterial({ color: 0x3a6a2a }));
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 1.5, 6), new THREE.MeshStandardMaterial({ color: 0x2a4a1a, roughness: 1 }));
       arm.position.set(0.8, 2.5, 0); arm.rotation.z = -Math.PI/3; arm.castShadow = true; cactus.add(arm);
     }
     cactus.position.set((Math.random()-0.5)*80, 0, (Math.random()-0.5)*80);
@@ -249,9 +342,8 @@ function addDesertDecor() {
     scene.add(cactus);
     if (Math.random() > 0.5) obstacles.push(cactus);
   }
-  // Скалы
-  for (let i = 0; i < 15; i++) {
-    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1 + Math.random()*1.5), new THREE.MeshStandardMaterial({ color: 0xa8885a }));
+  for (let i = 0; i < 20; i++) {
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1 + Math.random()*2), new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 1 }));
     rock.position.set((Math.random()-0.5)*85, 0.5, (Math.random()-0.5)*85);
     rock.castShadow = true; rock.receiveShadow = true;
     rock.userData.size = { x: 2, y: 2, z: 2 };
@@ -260,18 +352,16 @@ function addDesertDecor() {
 }
 
 function addFactoryDecor() {
-  // Контейнеры и бочки
-  const containerMat = new THREE.MeshStandardMaterial({ color: 0x3a6a8a, metalness: 0.4 });
-  for (let i = 0; i < 15; i++) {
+  const containerMat = new THREE.MeshStandardMaterial({ color: 0x1a2a3a, metalness: 0.5, roughness: 0.7 });
+  for (let i = 0; i < 18; i++) {
     const c = new THREE.Mesh(new THREE.BoxGeometry(4, 3, 8), containerMat);
     c.position.set((Math.random()-0.5)*80, 1.5, (Math.random()-0.5)*80);
     c.castShadow = true; c.receiveShadow = true;
     c.userData.size = { x: 4, y: 3, z: 8 };
     scene.add(c); obstacles.push(c);
   }
-  // Трубы
-  const pipeMat = new THREE.MeshStandardMaterial({ color: 0x8a8a8a, metalness: 0.7 });
-  for (let i = 0; i < 10; i++) {
+  const pipeMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, metalness: 0.7, roughness: 0.5 });
+  for (let i = 0; i < 12; i++) {
     const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 8, 8), pipeMat);
     pipe.position.set((Math.random()-0.5)*80, 4, (Math.random()-0.5)*80);
     pipe.castShadow = true;
@@ -280,35 +370,35 @@ function addFactoryDecor() {
 }
 
 function addMetroDecor() {
-  // Колонны
-  const pillarMat = new THREE.MeshStandardMaterial({ color: 0x4a4a5a });
+  const pillarMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 1 });
   for (let i = 0; i < 20; i++) {
     const x = ((i % 5) - 2) * 15;
     const z = (Math.floor(i / 5) - 1.5) * 20;
-    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 8, 8), pillarMat);
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 8, 6), pillarMat);
     p.position.set(x, 4, z);
     p.castShadow = true; p.receiveShadow = true;
     p.userData.size = { x: 1.2, y: 8, z: 1.2 };
     scene.add(p); obstacles.push(p);
   }
-  // Скамейки
-  const benchMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a });
+  // Мигающие лампы (атмосфера)
   for (let i = 0; i < 8; i++) {
-    const bench = new THREE.Mesh(new THREE.BoxGeometry(3, 0.5, 1), benchMat);
-    bench.position.set((Math.random()-0.5)*70, 0.25, (Math.random()-0.5)*70);
-    bench.castShadow = true;
-    scene.add(bench);
+    const light = new THREE.PointLight(0xffaa55, 0.6, 12);
+    light.position.set((Math.random()-0.5)*70, 7, (Math.random()-0.5)*70);
+    scene.add(light);
   }
 }
 
 function addLabDecor() {
-  // Колбы и ящики
-  for (let i = 0; i < 20; i++) {
-    const flask = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 1.5, 12), new THREE.MeshStandardMaterial({ color: 0x00cc88, transparent: true, opacity: 0.7, emissive: 0x00aa66, emissiveIntensity: 0.3 }));
+  for (let i = 0; i < 25; i++) {
+    const flask = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 1.5, 8),
+      new THREE.MeshStandardMaterial({ color: 0x00aa66, transparent: true, opacity: 0.6, emissive: 0x00aa66, emissiveIntensity: 0.8 }));
     flask.position.set((Math.random()-0.5)*80, 0.75, (Math.random()-0.5)*80);
     scene.add(flask);
+    const l = new THREE.PointLight(0x00ff88, 0.4, 5);
+    l.position.set(flask.position.x, 1, flask.position.z);
+    scene.add(l);
   }
-  const crateMat = new THREE.MeshStandardMaterial({ color: 0x4a6a5a });
+  const crateMat = new THREE.MeshStandardMaterial({ color: 0x1a2a1a, roughness: 1 });
   for (let i = 0; i < 12; i++) {
     const c = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), crateMat);
     c.position.set((Math.random()-0.5)*80, 1, (Math.random()-0.5)*80);
@@ -319,30 +409,28 @@ function addLabDecor() {
 }
 
 function addLairDecor() {
-  // Кости и черепа
-  const boneMat = new THREE.MeshStandardMaterial({ color: 0xccc8b8 });
-  for (let i = 0; i < 30; i++) {
-    const bone = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 1, 6), boneMat);
+  const boneMat = new THREE.MeshStandardMaterial({ color: 0x888878, roughness: 1 });
+  for (let i = 0; i < 50; i++) {
+    const bone = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 1, 5), boneMat);
     bone.position.set((Math.random()-0.5)*80, 0.2, (Math.random()-0.5)*80);
     bone.rotation.z = Math.PI/2; bone.rotation.y = Math.random()*Math.PI;
     scene.add(bone);
   }
-  // Огненные ямы
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 8; i++) {
     const pit = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 0.3, 12), new THREE.MeshStandardMaterial({ color: 0x1a0000 }));
     pit.position.set((Math.random()-0.5)*70, 0.15, (Math.random()-0.5)*70);
     scene.add(pit);
-    const fire = new THREE.PointLight(0xff4400, 1.5, 15);
+    const fire = new THREE.PointLight(0xff4400, 2, 18);
     fire.position.set(pit.position.x, 1, pit.position.z);
     scene.add(fire);
-    const fireMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff4400, transparent: true, opacity: 0.6 }));
+    const fireMesh = new THREE.Mesh(new THREE.SphereGeometry(1.2, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff5500, transparent: true, opacity: 0.7 }));
     fireMesh.position.set(pit.position.x, 1.5, pit.position.z);
     scene.add(fireMesh);
   }
 }
 
 function addObstacleCubes(color) {
-  const mat = new THREE.MeshStandardMaterial({ color });
+  const mat = new THREE.MeshStandardMaterial({ color, roughness: 1 });
   [[12,1,8,3,2,3],[-12,1,8,3,2,3],[12,1,-8,3,2,3],[-12,1,-8,3,2,3]].forEach(([x,y,z,sx,sy,sz]) => {
     const c = new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz), mat);
     c.position.set(x,y,z); c.castShadow = true; c.receiveShadow = true;
@@ -351,14 +439,14 @@ function addObstacleCubes(color) {
   });
 }
 
-// ============ ОРУЖИЕ (3D модель в руках) ============
+// ============ ОРУЖИЕ ============
 function createWeapon(type) {
   if (weaponGroup) camera.remove(weaponGroup);
   weaponGroup = new THREE.Group();
-  const metal = new THREE.MeshStandardMaterial({ color: 0x2a2a2e, metalness: 0.85, roughness: 0.35 });
-  const black = new THREE.MeshStandardMaterial({ color: 0x0a0a0a });
-  const wood = new THREE.MeshStandardMaterial({ color: 0x5a3a1a });
-  const grip = new THREE.MeshStandardMaterial({ color: 0x1a1a1a });
+  const metal = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.9, roughness: 0.4 });
+  const black = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.7 });
+  const wood = new THREE.MeshStandardMaterial({ color: 0x3a2510, roughness: 0.9 });
+  const grip = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.95 });
 
   if (type === 'pistol') {
     const s = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.09, 0.28), metal); s.position.set(0, 0.02, -0.15); weaponGroup.add(s);
@@ -367,7 +455,7 @@ function createWeapon(type) {
   } else if (type === 'rifle' || type === 'sniper' || type === 'flamethrower') {
     const len = type === 'sniper' ? 0.9 : (type === 'flamethrower' ? 0.45 : 0.5);
     const b = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.09, len), metal); b.position.set(0, 0, -len/2); weaponGroup.add(b);
-    const br = new THREE.Mesh(new THREE.CylinderGeometry(type === 'flamethrower' ? 0.04 : 0.018, type === 'flamethrower' ? 0.04 : 0.018, len, 8), type === 'flamethrower' ? new THREE.MeshStandardMaterial({ color: 0xcc6600 }) : metal);
+    const br = new THREE.Mesh(new THREE.CylinderGeometry(type === 'flamethrower' ? 0.04 : 0.018, type === 'flamethrower' ? 0.04 : 0.018, len, 8), type === 'flamethrower' ? new THREE.MeshStandardMaterial({ color: 0xaa5500 }) : metal);
     br.rotation.x = Math.PI/2; br.position.set(0, 0.01, -0.7); weaponGroup.add(br);
     const mag = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.22, 0.09), black); mag.position.set(0, -0.15, -0.15); mag.rotation.x = 0.15; weaponGroup.add(mag);
     const g = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.18, 0.08), grip); g.position.set(0, -0.13, 0.05); g.rotation.x = 0.3; weaponGroup.add(g);
@@ -388,33 +476,95 @@ function createWeapon(type) {
     const g2 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.18, 0.08), grip); g2.position.set(0.15, -0.13, 0.02); g2.rotation.x = 0.25; weaponGroup.add(g2);
     weaponGroup.position.set(0, -0.25, -0.5);
   }
-  const flash = new THREE.PointLight(0xffaa00, 0, 6);
+  const flash = new THREE.PointLight(0xffaa00, 0, 8);
   flash.position.set(0, 0.03, -0.9); weaponGroup.add(flash);
   weaponGroup.userData.flash = flash;
   camera.add(weaponGroup);
 }
 
-// ============ ЗОМБИ ============
+// ============ ЗОМБИ (улучшенные, страшные) ============
 function createZombie(isBoss) {
   const g = new THREE.Group();
-  const skinColors = isBoss
-    ? { body: 0x6a2a2a, head: 0x8a3a3a, helmet: 0x333333 }
-    : (() => { const sk = SKINS[PROGRESS.currentSkin] || SKINS.default; return { body: sk.body, head: sk.head, helmet: 0x6a7a5a }; })();
-  const uniform = new THREE.MeshStandardMaterial({ color: skinColors.body });
-  const skin = new THREE.MeshStandardMaterial({ color: skinColors.head });
-  const metal = new THREE.MeshStandardMaterial({ color: skinColors.helmet, metalness: 0.7 });
-  const glow = new THREE.MeshBasicMaterial({ color: isBoss ? 0xffaa00 : 0xff0000 });
+  const sk = SKINS[PROGRESS.currentSkin] || SKINS.default;
+  const skinColor = isBoss ? 0x6a2a2a : 0x3a5a2a;
+  const clothColor = isBoss ? 0x4a1a1a : sk.body;
+  const darkColor = isBoss ? 0x1a0000 : 0x1a2a0a;
+
+  const skin = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.95 });
+  const uniform = new THREE.MeshStandardMaterial({ color: clothColor, roughness: 1 });
+  const dark = new THREE.MeshStandardMaterial({ color: darkColor, roughness: 1 });
+  const blood = new THREE.MeshStandardMaterial({ color: 0x2a0000, roughness: 0.9 });
+  const glow = new THREE.MeshBasicMaterial({ color: isBoss ? 0xff6600 : 0xaa0000 });
   const size = isBoss ? 1.8 : 1;
-  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.35*size, 0.32*size, 1.0*size, 12), uniform); torso.position.y = 0.5*size; torso.castShadow = true; g.add(torso);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.28*size, 16, 12), skin); head.position.y = 1.45*size; head.castShadow = true; g.add(head);
-  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.34*size, 16, 10, 0, Math.PI*2, 0, Math.PI/2), metal); helmet.position.y = 1.55*size; helmet.castShadow = true; g.add(helmet);
-  const eL = new THREE.Mesh(new THREE.SphereGeometry(0.05*size, 8, 8), glow); eL.position.set(-0.1*size, 1.48*size, -0.24*size); g.add(eL);
-  const eR = new THREE.Mesh(new THREE.SphereGeometry(0.05*size, 8, 8), glow); eR.position.set(0.1*size, 1.48*size, -0.24*size); g.add(eR);
-  const zGun = new THREE.Mesh(new THREE.BoxGeometry(0.15*size, 0.15*size, 0.7*size), new THREE.MeshStandardMaterial({ color: 0x1a1a1a })); zGun.position.set(0.35*size, 0.75*size, -0.5*size); g.add(zGun);
-  g.position.y = 0.85*size;
+
+  // Торс — рваный
+  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.35*size, 0.32*size, 1.0*size, 8), uniform);
+  torso.position.y = 0.5*size; torso.castShadow = true; g.add(torso);
+  // Кровавое пятно на груди
+  const bloodSpot = new THREE.Mesh(new THREE.SphereGeometry(0.18*size, 6, 6), blood);
+  bloodSpot.position.set(0, 0.7*size, -0.35*size); bloodSpot.scale.set(1, 1.3, 0.3); g.add(bloodSpot);
+
+  // Голова — кривая
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.28*size, 12, 10), skin);
+  head.position.y = 1.45*size; head.castShadow = true;
+  head.rotation.z = (Math.random()-0.5) * 0.3;
+  g.add(head);
+
+  // Челюсть отвисшая
+  const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.22*size, 0.15*size, 0.25*size), dark);
+  jaw.position.set(0, 1.28*size, -0.15*size); g.add(jaw);
+
+  // Красные глаза с glow
+  const eL = new THREE.Mesh(new THREE.SphereGeometry(0.055*size, 6, 6), glow); eL.position.set(-0.11*size, 1.48*size, -0.24*size); g.add(eL);
+  const eR = new THREE.Mesh(new THREE.SphereGeometry(0.055*size, 6, 6), glow); eR.position.set(0.11*size, 1.48*size, -0.24*size); g.add(eR);
+
+  // Свечение глаз
+  const eyeLight = new THREE.PointLight(isBoss ? 0xff6600 : 0xaa0000, 0.5, 3);
+  eyeLight.position.set(0, 1.48*size, -0.3*size);
+  g.add(eyeLight);
+
+  // Руки вытянуты вперёд (зомби-стиль)
+  const armGeo = new THREE.CylinderGeometry(0.1*size, 0.08*size, 0.8*size, 6);
+  const aL = new THREE.Mesh(armGeo, uniform);
+  aL.position.set(-0.45*size, 0.75*size, -0.35*size);
+  aL.rotation.x = Math.PI/2.2; aL.castShadow = true; g.add(aL);
+  const aR = new THREE.Mesh(armGeo, uniform);
+  aR.position.set(0.45*size, 0.75*size, -0.35*size);
+  aR.rotation.x = Math.PI/2.2; aR.castShadow = true; g.add(aR);
+  // Кисти рук
+  const hL = new THREE.Mesh(new THREE.SphereGeometry(0.12*size, 6, 6), skin); hL.position.set(-0.45*size, 0.9*size, -0.75*size); g.add(hL);
+  const hR = new THREE.Mesh(new THREE.SphereGeometry(0.12*size, 6, 6), skin); hR.position.set(0.45*size, 0.9*size, -0.75*size); g.add(hR);
+
+  // Ноги — кривые
+  const legGeo = new THREE.CylinderGeometry(0.13*size, 0.11*size, 0.75*size, 6);
+  const lL = new THREE.Mesh(legGeo, dark); lL.position.set(-0.18*size, -0.4*size, 0); lL.castShadow = true; g.add(lL);
+  const lR = new THREE.Mesh(legGeo, dark); lR.position.set(0.18*size, -0.4*size, 0); lR.castShadow = true; g.add(lR);
+
+  // Ботинки
+  const bootGeo = new THREE.BoxGeometry(0.24*size, 0.2*size, 0.36*size);
+  const boot = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 1 });
+  const bL = new THREE.Mesh(bootGeo, boot); bL.position.set(-0.18*size, -0.85*size, -0.06*size); g.add(bL);
+  const bR = new THREE.Mesh(bootGeo, boot); bR.position.set(0.18*size, -0.85*size, -0.06*size); g.add(bR);
+
+  // Каска (только у обычных, у босса — рога)
+  if (!isBoss) {
+    const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.32*size, 10, 8, 0, Math.PI*2, 0, Math.PI/2),
+      new THREE.MeshStandardMaterial({ color: 0x2a2a2a, metalness: 0.8, roughness: 0.6 }));
+    helmet.position.y = 1.55*size; helmet.castShadow = true; g.add(helmet);
+  } else {
+    // Рога босса
+    const hornMat = new THREE.MeshStandardMaterial({ color: 0x1a0000, roughness: 0.8 });
+    const horn1 = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.5, 6), hornMat);
+    horn1.position.set(-0.2, 1.7, 0); horn1.rotation.z = -0.4; g.add(horn1);
+    const horn2 = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.5, 6), hornMat);
+    horn2.position.set(0.2, 1.7, 0); horn2.rotation.z = 0.4; g.add(horn2);
+  }
+
+  g.position.y = 0.9*size;
   return g;
 }
 
+// ============ СПАВН ============
 function spawnEnemy(isBoss = false) {
   if (!isGameActive) return;
   const lvl = LEVELS[currentLevel];
@@ -423,7 +573,7 @@ function spawnEnemy(isBoss = false) {
   const range = isBoss ? 20 : 45;
   const sides = [[-range,-30],[-range,0],[-range,30],[range,-30],[range,0],[range,30],[-30,-range],[0,-range],[30,-range],[-30,range],[0,range],[30,range]];
   const s = sides[Math.floor(Math.random()*sides.length)];
-  e.position.set(s[0] + (Math.random()-0.5)*3, 0.85*(isBoss?1.8:1), s[1] + (Math.random()-0.5)*3);
+  e.position.set(s[0] + (Math.random()-0.5)*3, 0.9*(isBoss?1.8:1), s[1] + (Math.random()-0.5)*3);
   let type = 'melee';
   if (!isBoss) {
     const r = Math.random();
@@ -439,6 +589,8 @@ function spawnEnemy(isBoss = false) {
     document.getElementById('bossName').innerHTML = '<svg class="ico-hud"><use href="#icon-skull"/></svg> БОСС УРОВНЯ ' + currentLevel;
     updateBossBar();
   }
+  // Страшный рык при спавне
+  playZombieGroan(e.position);
 }
 
 function updateBossBar() {
@@ -447,9 +599,7 @@ function updateBossBar() {
   document.getElementById('bossHealthFill').style.width = pct + '%';
 }
 
-// ============ КОЛЛИЗИИ / СТРЕЛЬБА / ВРАГИ / ЗВУКИ / УПРАВЛЕНИЕ ============
-// (Те же функции что в v10.0, копируй полностью из прошлого файла, они не изменились)
-
+// ============ КОЛЛИЗИИ / СТРЕЛЬБА ============
 function checkCollision(pos, r) {
   if (Math.abs(pos.x) > 46.5 || Math.abs(pos.z) > 46.5) return true;
   for (const o of obstacles) {
@@ -470,9 +620,10 @@ function shoot() {
   if (w.ammo <= 0) { reload(); return; }
   lastShotTime = now; w.ammo--; updateHUD();
   recoilPitch += currentWeapon === 'shotgun' ? 0.07 : (currentWeapon === 'sniper' ? 0.09 : 0.028);
+  shakeAmount = Math.max(shakeAmount, currentWeapon === 'shotgun' ? 0.15 : 0.05);
   playShootSound();
   if (weaponGroup.userData.flash) {
-    weaponGroup.userData.flash.intensity = 4;
+    weaponGroup.userData.flash.intensity = 5;
     setTimeout(() => { if (weaponGroup.userData.flash) weaponGroup.userData.flash.intensity = 0; }, 60);
   }
   const maxRange = w.shortRange || 150;
@@ -505,27 +656,28 @@ function reload() {
   const w = WEAPONS[currentWeapon];
   if (w.ammo === w.maxAmmo) return;
   reloading = true; updateHUD();
+  playReloadSound();
   setTimeout(() => { w.ammo = w.maxAmmo; reloading = false; updateHUD(); }, w.reload);
 }
 
 function createTracer(a, b) {
   const g = new THREE.BufferGeometry().setFromPoints([a, b]);
-  const m = new THREE.LineBasicMaterial({ color: currentWeapon === 'flamethrower' ? 0xff6600 : 0xffee88, opacity: 0.85, transparent: true });
+  const m = new THREE.LineBasicMaterial({ color: currentWeapon === 'flamethrower' ? 0xff6600 : 0xffdd88, opacity: 0.9, transparent: true });
   const l = new THREE.Line(g, m);
   scene.add(l);
-  setTimeout(() => { scene.remove(l); g.dispose(); m.dispose(); }, 40);
+  setTimeout(() => { scene.remove(l); g.dispose(); m.dispose(); }, 30);
 }
 
 function createBlood(pos) {
-  for (let i = 0; i < 5; i++) {
-    const g = new THREE.SphereGeometry(0.08, 6, 6);
-    const m = new THREE.MeshBasicMaterial({ color: 0x8a0000 });
+  for (let i = 0; i < 8; i++) {
+    const g = new THREE.SphereGeometry(0.06 + Math.random()*0.08, 4, 4);
+    const m = new THREE.MeshBasicMaterial({ color: 0x5a0000 });
     const s = new THREE.Mesh(g, m); s.position.copy(pos); scene.add(s);
-    const v = new THREE.Vector3((Math.random()-0.5)*2, Math.random()*2, (Math.random()-0.5)*2);
+    const v = new THREE.Vector3((Math.random()-0.5)*4, Math.random()*3, (Math.random()-0.5)*4);
     let life = 0;
     const iv = setInterval(() => {
-      life += 0.05; s.position.addScaledVector(v, 0.05); v.y -= 0.15; s.scale.multiplyScalar(0.9);
-      if (life > 0.4) { clearInterval(iv); scene.remove(s); g.dispose(); m.dispose(); }
+      life += 0.05; s.position.addScaledVector(v, 0.05); v.y -= 0.25; s.scale.multiplyScalar(0.9);
+      if (life > 0.5) { clearInterval(iv); scene.remove(s); g.dispose(); m.dispose(); }
     }, 30);
   }
 }
@@ -552,13 +704,14 @@ function killEnemy(en) {
   if (Math.random() < 0.3) spawnMedkitPickup(en.position.clone());
 }
 
+// ============ ЛУТ ============
 function spawnLootCrate(pos, weaponType) {
   const g = new THREE.Group();
-  const box = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), new THREE.MeshStandardMaterial({ color: 0x8a6a2a, metalness: 0.5 }));
+  const box = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), new THREE.MeshStandardMaterial({ color: 0x3a2510, roughness: 0.9 }));
   box.castShadow = true; g.add(box);
-  const trim = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.1, 0.65), new THREE.MeshStandardMaterial({ color: 0xffcc00, metalness: 0.9, emissive: 0xffaa00, emissiveIntensity: 0.4 }));
+  const trim = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.1, 0.65), new THREE.MeshStandardMaterial({ color: 0xffaa00, metalness: 0.9, emissive: 0xffaa00, emissiveIntensity: 0.5 }));
   trim.position.y = 0.35; g.add(trim);
-  const glow = new THREE.PointLight(0xffaa00, 0.8, 3); g.add(glow);
+  const glow = new THREE.PointLight(0xffaa00, 1, 4); g.add(glow);
   g.position.copy(pos); g.position.y = 0.3;
   g.userData = { weapon: weaponType, phase: Math.random()*Math.PI*2, isCrate: true };
   scene.add(g); lootCrates.push(g);
@@ -566,11 +719,12 @@ function spawnLootCrate(pos, weaponType) {
 
 function spawnMedkitPickup(pos) {
   const g = new THREE.Group();
-  const box = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.25, 0.4), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+  const box = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.25, 0.4), new THREE.MeshStandardMaterial({ color: 0xe0e0e0, roughness: 0.7 }));
   box.castShadow = true; g.add(box);
   const crossMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
   const c1 = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.08), crossMat); c1.position.y = 0.13; g.add(c1);
   const c2 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.05, 0.3), crossMat); c2.position.y = 0.13; g.add(c2);
+  const glow = new THREE.PointLight(0xff0000, 0.6, 3); g.add(glow);
   g.position.copy(pos); g.position.y = 0.15;
   g.userData = { isMedkit: true, phase: Math.random()*Math.PI*2 };
   scene.add(g); lootCrates.push(g);
@@ -628,24 +782,26 @@ function useMedkit() {
   medkits--; health = Math.min(100, health + 40); updateHUD(); showToast('+40 HP'); playHealSound();
 }
 
+// ============ ЗВУКИ (хоррор) ============
 function playShootSound() {
   if (!audioCtx) return;
   const o = audioCtx.createOscillator(), g = audioCtx.createGain();
   o.type = 'square';
-  o.frequency.setValueAtTime(currentWeapon === 'sniper' ? 350 : 200, audioCtx.currentTime);
-  o.frequency.exponentialRampToValueAtTime(55, audioCtx.currentTime + 0.08);
-  g.gain.setValueAtTime(0.15 * volume, audioCtx.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+  o.frequency.setValueAtTime(currentWeapon === 'sniper' ? 350 : 180, audioCtx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+  g.gain.setValueAtTime(0.2 * volume, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
   o.connect(g); g.connect(audioCtx.destination);
-  o.start(); o.stop(audioCtx.currentTime + 0.1);
+  o.start(); o.stop(audioCtx.currentTime + 0.12);
 }
 function playHitSound() {
   if (!audioCtx) return;
   const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-  o.type = 'sine'; o.frequency.setValueAtTime(900, audioCtx.currentTime);
-  g.gain.setValueAtTime(0.1 * volume, audioCtx.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
-  o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + 0.15);
+  o.type = 'sine'; o.frequency.setValueAtTime(500, audioCtx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.15);
+  g.gain.setValueAtTime(0.12 * volume, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+  o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + 0.2);
 }
 function playHealSound() {
   if (!audioCtx) return;
@@ -656,7 +812,50 @@ function playHealSound() {
   g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
   o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + 0.35);
 }
+function playReloadSound() {
+  if (!audioCtx) return;
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = 'square'; o.frequency.setValueAtTime(120, audioCtx.currentTime);
+  g.gain.setValueAtTime(0.08 * volume, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+  o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + 0.1);
+}
+function playZombieGroan(pos) {
+  if (!audioCtx) return;
+  const dist = pos.distanceTo(camera.position);
+  if (dist > 40) return;
+  const vol = (1 - dist/40) * 0.3 * volume;
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'lowpass'; filter.frequency.setValueAtTime(400, audioCtx.currentTime);
+  o.type = 'sawtooth';
+  const baseFreq = 80 + Math.random() * 40;
+  o.frequency.setValueAtTime(baseFreq, audioCtx.currentTime);
+  o.frequency.linearRampToValueAtTime(baseFreq * 0.6, audioCtx.currentTime + 0.8);
+  g.gain.setValueAtTime(0, audioCtx.currentTime);
+  g.gain.linearRampToValueAtTime(vol, audioCtx.currentTime + 0.15);
+  g.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.8);
+  o.connect(filter); filter.connect(g); g.connect(audioCtx.destination);
+  o.start(); o.stop(audioCtx.currentTime + 0.9);
+}
+function scheduleZombieSounds() {
+  setInterval(() => {
+    if (!isGameActive || !audioCtx) return;
+    // Случайный шёпот/стон
+    if (Math.random() < 0.3) {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(60 + Math.random()*40, audioCtx.currentTime);
+      g.gain.setValueAtTime(0, audioCtx.currentTime);
+      g.gain.linearRampToValueAtTime(0.02 * volume, audioCtx.currentTime + 0.3);
+      g.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1.5);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(); o.stop(audioCtx.currentTime + 1.6);
+    }
+  }, 4000);
+}
 
+// ============ АТАКИ ВРАГОВ ============
 function enemyShoot(en) {
   const start = en.position.clone(); start.y = en.userData.isBoss ? 2.5 : 1.4;
   const target = camera.position.clone();
@@ -665,6 +864,9 @@ function enemyShoot(en) {
   dir.normalize();
   const bullet = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), new THREE.MeshBasicMaterial({ color: 0xff6600 }));
   bullet.position.copy(start); scene.add(bullet);
+  // Трассер для пули
+  const glow = new THREE.PointLight(0xff6600, 0.5, 3);
+  bullet.add(glow);
   enemyBullets.push({ mesh: bullet, dir, speed: 40, life: 2.5, damage: LEVELS[currentLevel].enemyDamage * 8 });
 }
 function enemyThrowGrenade(en) {
@@ -672,7 +874,7 @@ function enemyThrowGrenade(en) {
   const target = camera.position.clone();
   const dir = new THREE.Vector3().subVectors(target, start).normalize();
   dir.y = 0.4; dir.normalize();
-  const gren = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), new THREE.MeshStandardMaterial({ color: 0x2a4a1a, metalness: 0.6 }));
+  const gren = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), new THREE.MeshStandardMaterial({ color: 0x1a2a0a, metalness: 0.7 }));
   gren.position.copy(start); gren.castShadow = true; scene.add(gren);
   grenades.push({ mesh: gren, velocity: dir.multiplyScalar(18), timer: 2.0, exploded: false });
 }
@@ -694,14 +896,16 @@ function updateGrenades(delta) {
     g.velocity.y -= 15 * delta;
     if (g.mesh.position.y < 0.2) { g.mesh.position.y = 0.2; g.velocity.y *= -0.4; g.velocity.x *= 0.7; g.velocity.z *= 0.7; }
     if (g.timer < 1 && Math.floor(g.timer * 8) % 2 === 0) g.mesh.material.color.setHex(0xff0000);
-    else g.mesh.material.color.setHex(0x2a4a1a);
+    else g.mesh.material.color.setHex(0x1a2a0a);
     if (g.timer <= 0) {
       g.exploded = true;
       const dist = g.mesh.position.distanceTo(camera.position);
       if (dist < 5) takeDamage(Math.max(10, 50 - dist*8));
-      const fire = new THREE.Mesh(new THREE.SphereGeometry(1.5, 12, 12), new THREE.MeshBasicMaterial({ color: 0xff6600, transparent: true, opacity: 0.9 }));
+      const fire = new THREE.Mesh(new THREE.SphereGeometry(2, 12, 12), new THREE.MeshBasicMaterial({ color: 0xff5500, transparent: true, opacity: 0.9 }));
       fire.position.copy(g.mesh.position); scene.add(fire);
-      setTimeout(() => scene.remove(fire), 300);
+      const light = new THREE.PointLight(0xff5500, 3, 15);
+      light.position.copy(g.mesh.position); scene.add(light);
+      setTimeout(() => { scene.remove(fire); scene.remove(light); }, 300);
       enemies.forEach(en => {
         if (en.position.distanceTo(g.mesh.position) < 5) {
           en.userData.health -= 40;
@@ -712,16 +916,29 @@ function updateGrenades(delta) {
   }
 }
 function takeDamage(amount) {
-  health -= amount; hitsTaken++; showDamage(); updateHUD();
+  health -= amount; hitsTaken++;
+  shakeAmount = Math.max(shakeAmount, 0.3);
+  showDamage(); updateHUD();
+  playHurtSound();
   if (health <= 0) gameOver();
+}
+function playHurtSound() {
+  if (!audioCtx) return;
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = 'triangle'; o.frequency.setValueAtTime(200, audioCtx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.3);
+  g.gain.setValueAtTime(0.15 * volume, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+  o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + 0.3);
 }
 function showDamage() {
   const v = document.getElementById('damageVignette');
   if (!v) return;
-  v.style.opacity = '0.8';
-  setTimeout(() => v.style.opacity = '0', 150);
+  v.style.opacity = '1';
+  setTimeout(() => v.style.opacity = '0', 200);
 }
 
+// ============ УПРАВЛЕНИЕ ============
 function setupControls() {
   document.addEventListener('keydown', (e) => {
     if (!isGameActive) return;
@@ -758,6 +975,7 @@ function setupControls() {
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);
+    if (composer) composer.setSize(innerWidth, innerHeight);
   });
   if (isMobile) setupMobileControls();
 }
@@ -837,9 +1055,10 @@ function updateMobileInput() {
   if (joystickDeltaX > dz) keys.d = true;
 }
 
+// ============ ОБНОВЛЕНИЕ ============
 function updatePlayer(delta) {
   if (!isGameActive) return;
-  const speed = 7.5;
+  const speed = 6.5;
   const fwd = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
   const rgt = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
   const move = new THREE.Vector3();
@@ -854,19 +1073,36 @@ function updatePlayer(delta) {
     if (!checkCollision(new THREE.Vector3(nx, camera.position.y, camera.position.z), 0.35)) camera.position.x = nx;
     const nz = camera.position.z + move.z;
     if (!checkCollision(new THREE.Vector3(camera.position.x, camera.position.y, nz), 0.35)) camera.position.z = nz;
+    bobPhase += delta * 12;
   }
   verticalVelocity -= GRAVITY * delta;
   playerY += verticalVelocity * delta;
   if (playerY <= 1.7) { playerY = 1.7; verticalVelocity = 0; isJumping = false; }
   camera.position.y = playerY;
+
+  // Дыхание игрока (тонкое покачивание)
+  breathPhase += delta * 1.5;
+  const breath = Math.sin(breathPhase) * 0.005;
+
+  // Покачивание при ходьбе
+  const bob = moved ? Math.sin(bobPhase) * 0.025 : 0;
+
+  // Тряска от выстрела/урона
+  shakeAmount *= 0.9;
+  const shakeX = (Math.random() - 0.5) * shakeAmount * 0.05;
+  const shakeY = (Math.random() - 0.5) * shakeAmount * 0.05;
+
   recoilPitch *= 0.88;
   camera.rotation.order = 'YXZ';
   camera.rotation.y = yaw;
-  camera.rotation.x = pitch + recoilPitch;
+  camera.rotation.x = pitch + recoilPitch + breath + bob * 0.5 + shakeY;
+  camera.rotation.z = bob * 0.3 + shakeX;
+
   if (weaponGroup) {
     const t = performance.now() / 220;
-    const bob = moved ? Math.sin(t) * 0.012 : 0;
-    weaponGroup.position.y = -0.26 + bob;
+    const bobW = moved ? Math.sin(t) * 0.012 : 0;
+    weaponGroup.position.y = -0.26 + bobW;
+    weaponGroup.position.x = 0.28 + (moved ? Math.sin(t*0.5) * 0.005 : 0);
   }
   if (isMouseDown && WEAPONS[currentWeapon].auto) shoot();
 }
@@ -881,7 +1117,7 @@ function updateEnemies(delta) {
     const meleeRange = en.userData.isBoss ? 3 : 2;
     if (dist > meleeRange) {
       const np = en.position.clone().addScaledVector(dir, en.userData.speed * delta);
-      np.y = 0.85 * (en.userData.isBoss ? 1.8 : 1);
+      np.y = 0.9 * (en.userData.isBoss ? 1.8 : 1);
       if (!checkCollision(np, en.userData.radius)) en.position.copy(np);
     } else {
       takeDamage(LEVELS[currentLevel].enemyDamage * (en.userData.isBoss ? 3 : 1));
@@ -903,8 +1139,8 @@ function updateEnemies(delta) {
     }
     en.rotation.y = Math.atan2(dir.x, dir.z);
     en.userData.walkPhase += delta * 4;
-    const baseY = 0.85 * (en.userData.isBoss ? 1.8 : 1);
-    en.position.y = baseY + Math.abs(Math.sin(en.userData.walkPhase)) * 0.05;
+    const baseY = 0.9 * (en.userData.isBoss ? 1.8 : 1);
+    en.position.y = baseY + Math.abs(Math.sin(en.userData.walkPhase)) * 0.06;
   });
 }
 
@@ -918,7 +1154,18 @@ function animate() {
   updateGrenades(d);
   updateLootCrates(d);
   updateDebugPanel();
-  renderer.render(scene, camera);
+
+  // Мигание фонарика (редкое, для атмосферы)
+  if (flashlight && Math.random() < 0.005) {
+    flashlight.intensity = 0.3;
+    setTimeout(() => { if (flashlight) flashlight.intensity = 1.5; }, 80);
+  }
+
+  if (composer) {
+    composer.render();
+  } else {
+    renderer.render(scene, camera);
+  }
 }
 
 // ============ HUD ============
@@ -930,7 +1177,7 @@ function updateHUD() {
   const a = document.getElementById('ammo');
   const m = document.getElementById('medkits');
   if (s) s.textContent = `Ур.${currentLevel} ${lvl.name} | Волна ${wave}/${lvl.waves}`;
-  if (h) h.textContent = '❤️ ' + Math.max(0, Math.floor(health));
+  if (h) h.textContent = Math.max(0, Math.floor(health));
   if (a) a.innerHTML = `<svg class="ico-hud"><use href="#icon-${w.icon}"/></svg> ${reloading ? '...' : w.ammo + '/' + w.maxAmmo}`;
   if (m) m.innerHTML = `<svg class="ico-hud"><use href="#icon-medkit"/></svg> x${medkits}`;
 }
@@ -943,11 +1190,9 @@ function nextWave() {
   if (!isGameActive) return;
   const lvl = LEVELS[currentLevel];
   if (wave < lvl.waves) {
-    wave++;
-    health = Math.min(100, health + 20);
+    wave++; health = Math.min(100, health + 20);
     Object.keys(WEAPONS).forEach(k => WEAPONS[k].ammo = WEAPONS[k].maxAmmo);
-    updateHUD();
-    showToast('Волна ' + wave);
+    updateHUD(); showToast('Волна ' + wave);
   } else if (lvl.boss && !currentBoss) {
     showToast('БОСС!');
     spawnEnemy(true);
@@ -1003,8 +1248,7 @@ function startLevel(levelNum) {
   currentBoss = null;
   document.getElementById('bossBar').style.display = 'none';
   camera.position.set(0, playerY, 0);
-  yaw = 0; pitch = 0; recoilPitch = 0;
-  // Перестраиваем окружение
+  yaw = 0; pitch = 0; recoilPitch = 0; bobPhase = 0; breathPhase = 0; shakeAmount = 0;
   buildLevelEnvironment(levelNum);
   currentWeapon = 'rifle';
   if (!PROGRESS.ownedWeapons.includes('rifle')) currentWeapon = PROGRESS.ownedWeapons[0] || 'pistol';
@@ -1022,13 +1266,14 @@ function startLevel(levelNum) {
   if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
   if (window.startBackgroundMusic) window.startBackgroundMusic();
   if (!isMobile) setTimeout(() => { if (renderer.domElement.requestPointerLock) renderer.domElement.requestPointerLock(); }, 200);
-  for (let i = 0; i < 3; i++) setTimeout(() => spawnEnemy(), i * 500);
+  for (let i = 0; i < 3; i++) setTimeout(() => spawnEnemy(), i * 700);
   if (window._spawnInt) clearInterval(window._spawnInt);
-  window._spawnInt = setInterval(() => spawnEnemy(), 1800);
+  window._spawnInt = setInterval(() => spawnEnemy(), 2200);
   if (window._waveInt) clearInterval(window._waveInt);
   window._waveInt = setInterval(() => nextWave(), 25000);
 }
 
+// ============ UI ============
 function setupUI() {
   document.getElementById('playBtn').addEventListener('click', () => { document.getElementById('menu').style.display = 'none'; document.getElementById('map').style.display = 'flex'; renderLevelGrid(); updateCoinsDisplay(); });
   document.getElementById('backToMenu').addEventListener('click', () => { document.getElementById('map').style.display = 'none'; document.getElementById('menu').style.display = 'flex'; });
@@ -1084,7 +1329,7 @@ function renderShop(tab) {
       item.className = 'shop-item' + (owned ? ' owned' : '') + (equipped ? ' equipped' : '');
       const colorHex = '#' + s.body.toString(16).padStart(6, '0');
       item.innerHTML = `
-        <div class="item-icon" style="color:${colorHex};">👤</div>
+        <div class="item-icon" style="color:${colorHex}; font-size:48px;">👤</div>
         <div class="item-name">${s.name}</div>
         <div class="item-desc">Цвет: ${colorHex}</div>
         <div class="item-price">${owned ? '✓ Куплено' : '<svg class="ico-sm"><use href="#icon-coin"/></svg> ' + s.cost}</div>
@@ -1141,7 +1386,7 @@ function updateDebugPanel() {
   if (!debugMode) { p.style.display = 'none'; return; }
   p.style.display = 'block';
   const w = WEAPONS[currentWeapon];
-  p.textContent = `DEBUG\nlevel: ${currentLevel} ${LEVELS[currentLevel].name}\nwave: ${wave}/${LEVELS[currentLevel].waves}\nenemies: ${enemies.length}\nbullets: ${enemyBullets.length}\nweapon: ${w.name}\nammo: ${w.ammo}/${w.maxAmmo}\nhits: ${hitsTaken}\ncoins: ${PROGRESS.coins}`;
+  p.textContent = `HORROR DEBUG\nlevel: ${currentLevel} ${LEVELS[currentLevel].name}\nwave: ${wave}/${LEVELS[currentLevel].waves}\nenemies: ${enemies.length}\nbullets: ${enemyBullets.length}\nweapon: ${w.name}\nammo: ${w.ammo}/${w.maxAmmo}\nhits: ${hitsTaken}\ncoins: ${PROGRESS.coins}`;
 }
 
 function setupSettings() {
@@ -1164,5 +1409,5 @@ function setupSettings() {
 window.addEventListener('load', () => {
   init();
   createDebugPanel();
-  console.log('ZOMBIESHOOT v11.0 запущен. 8 уровней, новые локации.');
+  console.log('ZOMBIESHOOT v12.0 HORROR — тёмная атмосфера');
 });

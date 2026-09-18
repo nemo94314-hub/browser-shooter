@@ -9,7 +9,7 @@
 <body>
 <canvas id="bgCanvas"></canvas>
 
-<!-- SVG-ИКОНКИ ОРУЖИЯ (скрытый блок) -->
+<!-- SVG-ИКОНКИ (без черепа — он теперь картинкой) -->
 <svg style="display:none;">
   <symbol id="icon-pistol" viewBox="0 0 64 64">
     <path d="M8 28 L8 24 L40 24 L40 20 L44 20 L44 24 L52 24 L52 28 L44 28 L44 32 L40 32 L40 28 L30 28 L30 40 L26 40 L26 28 Z" fill="currentColor" stroke="#000" stroke-width="1"/>
@@ -35,7 +35,7 @@
   </symbol>
   <symbol id="icon-dual" viewBox="0 0 64 64">
     <path d="M6 26 L6 22 L26 22 L26 18 L30 18 L30 22 L34 22 L34 26 L30 26 L30 30 L26 30 L26 26 L16 26 L16 38 L12 38 L12 26 Z" fill="currentColor" stroke="#000" stroke-width="1"/>
-    <path d="M30 26 L30 22 L50 22 L50 18 L54 18 L54 22 L58 22 L58 26 L54 26 L54 30 L50 30 L50 26 L40 26 L40 38 L36 38 L36 26 Z" fill="currentColor" stroke="#000" stroke-width="1" transform="translate(0,6)"/>
+    <path d="M30 32 L30 28 L50 28 L50 24 L54 24 L54 28 L58 28 L58 32 L54 32 L54 36 L50 36 L50 32 L40 32 L40 44 L36 44 L36 32 Z" fill="currentColor" stroke="#000" stroke-width="1"/>
   </symbol>
   <symbol id="icon-flame" viewBox="0 0 64 64">
     <rect x="4" y="26" width="40" height="10" fill="#cc6600" stroke="#000" stroke-width="1"/>
@@ -96,14 +96,14 @@
 <!-- ГЛАВНОЕ МЕНЮ -->
 <div id="menu" class="screen">
   <div class="menu-box">
-    <svg class="skull-svg"><use href="#icon-skull"/></svg>
+    <img src="skull.png" class="skull-img" alt="ZOMBIESHOOT">
     <h1 class="game-title">ZOMBIE<span class="red">SHOOT</span></h1>
     <p class="tagline">ВЫЖИВИ В ЗОНЕ ЗАРАЖЕНИЯ</p>
     <div class="version">v11.0 · 8 LEVELS</div>
     <div class="coins-display"><svg class="ico-sm"><use href="#icon-coin"/></svg> <span id="menuCoins">0</span></div>
-    <button id="playBtn" class="btn-primary">▶ ИГРАТЬ</button>
+    <button id="playBtn" class="btn-primary">ИГРАТЬ</button>
     <button id="shopBtn" class="btn-secondary"><svg class="ico-sm"><use href="#icon-weapon-switch"/></svg> МАГАЗИН</button>
-    <button id="settingsBtn" class="btn-secondary">⚙ НАСТРОЙКИ</button>
+    <button id="settingsBtn" class="btn-secondary">НАСТРОЙКИ</button>
   </div>
 </div>
 
@@ -124,12 +124,12 @@
   <div class="wide-box">
     <div class="top-bar">
       <button id="backFromShop" class="btn-back">←</button>
-      <h2>🛒 МАГАЗИН</h2>
+      <h2>МАГАЗИН</h2>
       <div class="coins-display"><svg class="ico-sm"><use href="#icon-coin"/></svg> <span id="shopCoins">0</span></div>
     </div>
     <div class="shop-tabs">
-      <button class="shop-tab active" data-tab="skins">👤 Скины</button>
-      <button class="shop-tab" data-tab="weapons">🔫 Оружие</button>
+      <button class="shop-tab active" data-tab="skins">СКИНЫ</button>
+      <button class="shop-tab" data-tab="weapons">ОРУЖИЕ</button>
     </div>
     <div id="shopContent" class="shop-grid"></div>
   </div>
@@ -138,7 +138,7 @@
 <!-- НАСТРОЙКИ -->
 <div id="settings" class="screen" style="display:none;">
   <div class="settings-box">
-    <h2>⚙ НАСТРОЙКИ</h2>
+    <h2>НАСТРОЙКИ</h2>
     <div class="settings-block">
       <h3>ГРАФИКА И ЗВУК</h3>
       <label>Чувствительность <input type="range" id="sensSlider" min="1" max="20" value="5"></label>
@@ -155,11 +155,11 @@
     <div class="settings-block">
       <h3>ПРОЧЕЕ</h3>
       <label class="toggle-label"><input type="checkbox" id="debugToggle"><span>Отладка</span></label>
-      <button id="resetProgress" class="btn-danger">🗑 Сбросить прогресс</button>
+      <button id="resetProgress" class="btn-danger">СБРОСИТЬ ПРОГРЕСС</button>
     </div>
     <div class="settings-block support-block">
       <h3>ПОДДЕРЖКА</h3>
-      <a href="mailto:nemo94314@gmail.com?subject=ZOMBIESHOOT" class="btn-support">✉ ПОЧТА</a>
+      <a href="mailto:nemo94314@gmail.com?subject=ZOMBIESHOOT" class="btn-support">НАПИСАТЬ НА ПОЧТУ</a>
       <p class="support-email">nemo94314@gmail.com</p>
     </div>
     <button id="closeSettings" class="btn-primary">← НАЗАД</button>
@@ -169,7 +169,7 @@
 <!-- HUD -->
 <div id="hud" style="display:none;">
   <div id="score">Ур.1 | Волна 1/1</div>
-  <div id="health">❤️ 100</div>
+  <div id="health">100</div>
   <div id="ammo"><svg class="ico-hud"><use href="#icon-rifle"/></svg> 30/30</div>
   <div id="medkits"><svg class="ico-hud"><use href="#icon-medkit"/></svg> x2</div>
   <div id="crosshair">+</div>
@@ -206,17 +206,17 @@
     </div>
     <p class="complete-stats">Получено: <b id="coinsEarned">0</b> <svg class="ico-sm"><use href="#icon-coin"/></svg></p>
     <button id="toMapBtn" class="btn-primary">К КАРТЕ</button>
-    <button id="replayBtn" class="btn-secondary">🔄 ЕЩЁ РАЗ</button>
+    <button id="replayBtn" class="btn-secondary">ЕЩЁ РАЗ</button>
   </div>
 </div>
 
 <!-- GAME OVER -->
 <div id="gameover" class="screen" style="display:none;">
   <div class="menu-box">
-    <svg class="skull-svg small"><use href="#icon-skull"/></svg>
+    <img src="skull.png" class="skull-img small" alt="ZOMBIESHOOT">
     <h1 class="death-title">ТЫ ПОГИБ</h1>
     <p class="final-score-label">УРОВЕНЬ <span id="deadLevel">1</span></p>
-    <button id="retryBtn" class="btn-primary">🔄 ЕЩЁ РАЗ</button>
+    <button id="retryBtn" class="btn-primary">ЕЩЁ РАЗ</button>
     <button id="toMapBtn2" class="btn-secondary">К КАРТЕ</button>
   </div>
 </div>

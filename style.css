@@ -6,7 +6,7 @@ html, body { overflow: hidden; background: #000; color: #fff; touch-action: none
 .menu-box { max-width: 560px; width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; animation: fadeUp 0.5s; position: relative; z-index: 101; }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(25px); } to { opacity: 1; transform: translateY(0); } }
 
-/* ===== КАРТИНКА ЧЕРЕПА ===== */
+/* ===== ЧЕРЕП ===== */
 .skull-img {
   width: 180px;
   height: auto;
@@ -21,10 +21,7 @@ html, body { overflow: hidden; background: #000; color: #fff; touch-action: none
   user-select: none;
   -webkit-user-drag: none;
 }
-.skull-img.small {
-  width: 110px;
-  max-height: 130px;
-}
+.skull-img.small { width: 110px; max-height: 130px; }
 @keyframes skullPulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.04); }
@@ -59,7 +56,7 @@ html, body { overflow: hidden; background: #000; color: #fff; touch-action: none
 .btn-back { background: transparent; border: 1px solid #666; color: #fff; width: 42px; height: 42px; border-radius: 4px; cursor: pointer; font-size: 20px; font-family: 'Impact', sans-serif; }
 .btn-back:hover { border-color: #ff0033; color: #ff0033; }
 
-/* ===== ШИРОКИЙ БЛОК (карта, магазин) ===== */
+/* ===== ШИРОКИЙ БЛОК ===== */
 .wide-box { max-width: 900px; width: 100%; background: #0a0a0a; border: 2px solid #ff0033; border-radius: 10px; padding: 25px; box-shadow: 0 0 60px rgba(255,0,51,0.4); position: relative; z-index: 101; max-height: 95vh; overflow-y: auto; }
 .top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 25px; gap: 15px; }
 .top-bar h2 { font-size: 26px; letter-spacing: 4px; color: #ff0033; text-transform: uppercase; font-family: 'Impact', sans-serif; text-shadow: 0 0 20px rgba(255,0,51,0.7); flex: 1; text-align: center; }
@@ -132,7 +129,7 @@ html, body { overflow: hidden; background: #000; color: #fff; touch-action: none
 #interactPrompt { position: absolute; top: 60%; left: 50%; transform: translate(-50%,-50%); font-size: 16px; font-weight: 800; color: #ffdd00; font-family: 'Courier New', monospace; display: none; background: rgba(0,0,0,0.6); padding: 6px 16px; border: 2px solid #ffdd00; border-radius: 4px; }
 #hitMarker { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 30px; color: #fff; font-weight: 900; opacity: 0; text-shadow: 0 0 10px #ff0000; }
 #hitMarker.show { opacity: 1; }
-#damageVignette { position: absolute; inset: 0; background: radial-gradient(circle, transparent 35%, rgba(255,0,0,0.7)); opacity: 0; transition: opacity 0.25s; }
+#damageVignette { position: absolute; inset: 0; background: radial-gradient(circle, transparent 25%, rgba(120,0,0,0.9) 80%); opacity: 0; transition: opacity 0.25s; }
 #bossBar { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 600px; text-align: center; }
 #bossName { font-size: 16px; color: #ff6600; font-weight: 900; letter-spacing: 4px; text-shadow: 0 0 15px rgba(255,102,0,0.9); font-family: 'Impact', sans-serif; margin-bottom: 6px; display: flex; align-items: center; justify-content: center; gap: 6px; }
 #bossName .ico-hud { fill: #ff6600; width: 20px; height: 20px; }
@@ -173,6 +170,31 @@ html, body { overflow: hidden; background: #000; color: #fff; touch-action: none
 .mob-btn.pickup { background: rgba(255,221,0,0.3); border-color: #ffdd00; }
 .mob-btn.pickup .ico-btn { fill: #ffdd00; }
 
+/* ===== ХОРРОР-ЭФФЕКТЫ ===== */
+#hud::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle, transparent 45%, rgba(0,0,0,0.6) 100%);
+  z-index: 5;
+}
+
+body.low-hp #hud::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 10% 20%, rgba(120,0,0,0.6), transparent 30%),
+    radial-gradient(circle at 90% 70%, rgba(120,0,0,0.5), transparent 25%),
+    radial-gradient(circle at 30% 90%, rgba(120,0,0,0.4), transparent 20%);
+  z-index: 55;
+  animation: bloodPulse 2s infinite;
+}
+@keyframes bloodPulse { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
+
+/* ===== МОБИЛЬНАЯ АДАПТАЦИЯ ===== */
 @media (max-width: 900px) and (pointer: coarse), (hover: none) and (pointer: coarse) {
   #mobileControls { display: block; }
   #crosshair { font-size: 18px; }

@@ -271,6 +271,47 @@ function playPickupSound() {
   o.start(now); o.stop(now + 0.22);
 }
 
+// ============ ХЕДШОТЫ (НОВОЕ) ============
+function playHeadshotSound() {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+
+  // "Хруст" — короткий высокий щелчок
+  const o1 = audioCtx.createOscillator(), g1 = audioCtx.createGain();
+  o1.type = 'square';
+  o1.frequency.setValueAtTime(1200, now);
+  o1.frequency.exponentialRampToValueAtTime(300, now + 0.08);
+  g1.gain.setValueAtTime(0.15 * volume, now);
+  g1.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+  o1.connect(g1); g1.connect(audioCtx.destination);
+  o1.start(now); o1.stop(now + 0.11);
+
+  // Низкий "бум" для сочности
+  const o2 = audioCtx.createOscillator(), g2 = audioCtx.createGain();
+  o2.type = 'triangle';
+  o2.frequency.setValueAtTime(180, now);
+  o2.frequency.exponentialRampToValueAtTime(60, now + 0.15);
+  g2.gain.setValueAtTime(0.2 * volume, now);
+  g2.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+  o2.connect(g2); g2.connect(audioCtx.destination);
+  o2.start(now); o2.stop(now + 0.2);
+}
+
+function showHitmarker(isHead) {
+  const hm = document.getElementById('hitmarker');
+  if (!hm) return;
+  hm.textContent = '✕';
+  hm.style.color = isHead ? '#ffcc00' : '#ffffff';
+  hm.style.fontSize = isHead ? '42px' : '28px';
+  hm.style.opacity = '1';
+  hm.style.transform = 'translate(-50%, -50%) scale(' + (isHead ? '1.3' : '1') + ')';
+  clearTimeout(hm._timeout);
+  hm._timeout = setTimeout(() => {
+    hm.style.opacity = '0';
+    hm.style.transform = 'translate(-50%, -50%) scale(0.8)';
+  }, 120);
+}
+
 // ============ ИНИЦИАЛИЗАЦИЯ ============
 function init() {
   scene = new THREE.Scene();
@@ -393,7 +434,6 @@ function buildLevelEnvironment(levelNum) {
     scene.add(wall); obstacles.push(wall);
   });
 
-  // Простые укрытия
   const obsMat = new THREE.MeshStandardMaterial({ color: horrorMode ? 0x3a2a1a : 0x6a552a, roughness: 1 });
   [[12,1,8,3,2,3],[-12,1,8,3,2,3],[12,1,-8,3,2,3],[-12,1,-8,3,2,3]].forEach(([x,y,z,sx,sy,sz]) => {
     const c = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), obsMat);
@@ -403,7 +443,6 @@ function buildLevelEnvironment(levelNum) {
     scene.add(c); obstacles.push(c);
   });
 
-  // Фонарик
   if (horrorMode) {
     flashlight = new THREE.SpotLight(0xfff2d0, 1.5, 25, Math.PI / 7, 0.4, 1.5);
     flashlight.position.set(0, 0, 0);
@@ -469,6 +508,7 @@ function createZombie(isBoss) {
 
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.28 * size, 12, 10), skin);
   head.position.y = 1.45 * size; head.castShadow = true; g.add(head);
+  head.userData.isHead = true; // ← ХЕДШОТ: помечаем голову
 
   const eL = new THREE.Mesh(new THREE.SphereGeometry(0.055 * size, 6, 6), glow);
   eL.position.set(-0.11 * size, 1.48 * size, -0.24 * size); g.add(eL);
@@ -514,7 +554,7 @@ function spawnEnemy(isBoss = false) {
     nextShotTime: performance.now() + 2000 + Math.random() * 3000,
     weaponDrop: type === 'shooter' ? 'rifle' : (type === 'grenadier' ? 'shotgun' : 'pistol')
   };
-    scene.add(e);
+  scene.add(e);
   e.userData.lastShot = 0;
   e.userData.nextGroan = performance.now() + Math.random() * 5000;
   enemies.push(e);
@@ -523,14 +563,12 @@ function spawnEnemy(isBoss = false) {
     bossMaxHealth = e.userData.maxHealth;
   }
 }
-// ============ ПРОДОЛЖЕНИЕ ZOMBIESHOOT v15.0 ============
 
-// ---------- ИГРОВЫЕ ПЕРЕМЕННЫЕ ----------
+// ============ ИГРОВЫЕ ПЕРЕМЕННЫЕ ============
 let gameStartTime = 0;
 let waveEnemiesRemaining = 0;
 let waveSpawnTimer = null;
 let messageTimeout = null;
-let currentSurvivalMode = null;
 
 // ---------- УТИЛИТЫ ----------
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
@@ -693,7 +731,7 @@ function updateEnemies(delta) {
 
     ud.walkPhase += delta * 6;
     e.children.forEach((child, idx) => {
-      if (idx === 3 || idx === 4) {
+      if (idx === 4 || idx === 5) {
         child.rotation.x = Math.sin(ud.walkPhase) * 0.4;
       }
     });
@@ -934,6 +972,12 @@ function shoot() {
   recoilPitch = 0.02 + Math.random() * 0.02;
   shakeAmount = Math.min(1, shakeAmount + 0.1);
 
+  const flash = weaponGroup?.userData?.flash;
+  if (flash) {
+    flash.intensity = 3;
+    setTimeout(() => { flash.intensity = 0; }, 50);
+  }
+
   const pellets = w.pellets || 1;
   for (let i = 0; i < pellets; i++) {
     const spread = w.spread;
@@ -951,10 +995,19 @@ function shoot() {
       let enemyObj = hit.object;
       while (enemyObj.parent && !enemies.includes(enemyObj)) enemyObj = enemyObj.parent;
       if (enemies.includes(enemyObj)) {
-        const dmg = w.damage;
-        enemyObj.userData.health -= dmg;
+        // ============ ХЕДШОТ-ЛОГИКА ============
+        const isHead = hit.object.userData && hit.object.userData.isHead === true;
+        const multiplier = isHead ? 3 : 1;
+        enemyObj.userData.health -= w.damage * multiplier;
         playHitSoundEnhanced();
-        addScore(10);
+        if (isHead) {
+          playHeadshotSound();
+          addScore(25);
+          showHitmarker(true);
+        } else {
+          addScore(10);
+          showHitmarker(false);
+        }
       }
     } else {
       const wallIntersects = raycaster.intersectObjects(obstacles, true);
@@ -1245,6 +1298,7 @@ function setupUI() {
       <div id="waveDisplay">Волна: <span id="waveValue">1</span></div>
       <div id="medkitDisplay">Аптечки: <span id="medkitCount">2</span></div>
       <div id="messageBox"></div>
+      <div id="hitmarker">✕</div>
     `;
     document.body.appendChild(hud);
   }
@@ -1282,6 +1336,21 @@ function setupUI() {
     #waveDisplay { top: 20px; left: 50%; transform: translateX(-50%); bottom: auto; right: auto; }
     #medkitDisplay { bottom: 80px; right: 20px; }
     #messageBox { position: absolute; top: 30%; left: 50%; transform: translateX(-50%); font-size: 24px; text-align: center; text-shadow: 2px 2px 4px #000; }
+    #hitmarker {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #fff;
+      font-size: 28px;
+      font-weight: bold;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 15;
+      transition: opacity 0.1s, transform 0.1s, font-size 0.1s, color 0.1s;
+      text-shadow: 0 0 6px rgba(0,0,0,0.9);
+      font-family: monospace;
+    }
     #mainMenu { position: fixed; inset: 0; background: rgba(0,0,0,0.9); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; font-family: monospace; }
     #mainMenu.hidden, #hud.hidden { display: none; }
     #levelGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 20px; }

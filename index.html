@@ -1,42 +1,108 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Browser Shooter</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZOMBIESHOOT</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Меню -->
-    <div id="menu">
-        <h1>🎯 BROWSER SHOOTER</h1>
-        <p>Кликни, чтобы начать</p>
-        <button id="startBtn">ИГРАТЬ</button>
-        <div class="controls">
-            <p><b>WASD</b> — движение</p>
-            <p><b>Мышь</b> — прицел</p>
-            <p><b>ЛКМ</b> — выстрел</p>
-            <p><b>ESC</b> — пауза</p>
-        </div>
-    </div>
+<canvas id="bgCanvas"></canvas>
 
-    <!-- HUD -->
-    <div id="hud" style="display:none;">
-        <div id="score">Счёт: 0</div>
-        <div id="health">❤️ 100</div>
-        <div id="ammo">🔫 30 / ∞</div>
-        <div id="crosshair">+</div>
-    </div>
+<div id="menu">
+  <div class="menu-content">
+    <div class="logo">💀</div>
+    <h1 class="game-title">ZOMBIE<span class="red">SHOOT</span></h1>
+    <p class="tagline">Выживи. Уничтожь. Не сдавайся.</p>
+    <div class="version">v4.0 · Alpha</div>
 
-    <!-- Экран смерти -->
-    <div id="gameover" style="display:none;">
-        <h1>💀 ТЫ ПОГИБ</h1>
-        <p>Счёт: <span id="finalScore">0</span></p>
-        <button id="restartBtn">ЗАНОВО</button>
-    </div>
+    <button id="startBtn" class="btn-primary">▶ ИГРАТЬ</button>
 
-    <!-- Подключаем Three.js через CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="game.js"></script>
+    <button id="settingsBtn" class="btn-secondary">⚙ НАСТРОЙКИ</button>
+
+    <div class="controls">
+      <div class="controls-title">УПРАВЛЕНИЕ</div>
+      <div class="control-grid">
+        <div><span class="key">WASD</span><span>Движение</span></div>
+        <div><span class="key">МЫШЬ</span><span>Обзор</span></div>
+        <div><span class="key">ЛКМ</span><span>Выстрел</span></div>
+        <div><span class="key">SPACE</span><span>Прыжок</span></div>
+        <div><span class="key">R</span><span>Перезарядка</span></div>
+        <div><span class="key">1 2 3</span><span>Оружие</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Настройки -->
+<div id="settings" style="display:none;">
+  <div class="settings-panel">
+    <h2>⚙ НАСТРОЙКИ</h2>
+    <div class="setting-row">
+      <label>Чувствительность мыши</label>
+      <input type="range" id="sensSlider" min="1" max="20" value="5">
+    </div>
+    <div class="setting-row">
+      <label>Громкость</label>
+      <input type="range" id="volSlider" min="0" max="100" value="70">
+    </div>
+    <div class="setting-row">
+      <label>Качество графики</label>
+      <select id="qualitySelect">
+        <option value="high">Высокое</option>
+        <option value="medium" selected>Среднее</option>
+        <option value="low">Низкое</option>
+      </select>
+    </div>
+    <button id="closeSettings" class="btn-primary">ЗАКРЫТЬ</button>
+  </div>
+</div>
+
+<div id="hud" style="display:none;">
+  <div id="score">Счёт: 0 | Волна: 1</div>
+  <div id="health">❤️ 100</div>
+  <div id="ammo">🔫 30 / 30</div>
+  <div id="crosshair">+</div>
+  <div id="damageVignette"></div>
+</div>
+
+<div id="gameover" style="display:none;">
+  <div class="menu-content">
+    <h1 class="death-title">💀 ТЫ ПОГИБ</h1>
+    <p class="final-score-label">Твой результат</p>
+    <p class="final-score-value"><span id="finalScore">0</span></p>
+    <button id="restartBtn" class="btn-primary">🔄 ЗАНОВО</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="game.js"></script>
+<script>
+// Фоновые частицы
+const bg = document.getElementById('bgCanvas');
+const bctx = bg.getContext('2d');
+function resize(){ bg.width = innerWidth; bg.height = innerHeight; }
+resize(); addEventListener('resize', resize);
+const pts = Array.from({length: 100}, () => ({
+  x: Math.random()*bg.width, y: Math.random()*bg.height,
+  vx:(Math.random()-0.5)*0.4, vy:(Math.random()-0.5)*0.4,
+  r: Math.random()*2+0.5, a: Math.random()*0.4+0.1
+}));
+function drawBG(){
+  bctx.fillStyle = '#07080f';
+  bctx.fillRect(0,0,bg.width,bg.height);
+  pts.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    if(p.x<0||p.x>bg.width) p.vx*=-1;
+    if(p.y<0||p.y>bg.height) p.vy*=-1;
+    bctx.beginPath();
+    bctx.arc(p.x, p.y, p.r, 0, 6.28);
+    bctx.fillStyle = `rgba(200,40,40,${p.a})`;
+    bctx.fill();
+  });
+  requestAnimationFrame(drawBG);
+}
+drawBG();
+</script>
 </body>
 </html>

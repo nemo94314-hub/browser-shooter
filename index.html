@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ZOMBIESHOOT</title>
 <link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ff0033">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ZOMBIESHOOT">
+<link rel="apple-touch-icon" href="skull.png">
 </head>
 <body>
 <canvas id="bgCanvas"></canvas>
@@ -102,6 +108,7 @@
     <div class="version">v12.0 · HORROR</div>
     <div class="coins-display"><svg class="ico-sm"><use href="#icon-coin"/></svg> <span id="menuCoins">0</span></div>
     <button id="playBtn" class="btn-primary">ИГРАТЬ</button>
+    <button id="survivalBtn" class="btn-primary" style="background:linear-gradient(135deg,#4a0000,#8a0000);border-color:#8a0000;">ВЫЖИВАНИЕ</button>
     <button id="shopBtn" class="btn-secondary"><svg class="ico-sm"><use href="#icon-weapon-switch"/></svg> МАГАЗИН</button>
     <button id="settingsBtn" class="btn-secondary">НАСТРОЙКИ</button>
   </div>
@@ -139,6 +146,7 @@
 <div id="settings" class="screen" style="display:none;">
   <div class="settings-box">
     <h2>НАСТРОЙКИ</h2>
+
     <div class="settings-block">
       <h3>ГРАФИКА И ЗВУК</h3>
       <label>Чувствительность <input type="range" id="sensSlider" min="1" max="20" value="5"></label>
@@ -152,16 +160,30 @@
       </label>
       <label>FOV <input type="range" id="fovSlider" min="60" max="100" value="75"></label>
     </div>
+
+    <div class="settings-block">
+      <h3>РЕЖИМ ИГРЫ</h3>
+      <label class="toggle-label">
+        <input type="checkbox" id="horrorToggle" checked>
+        <span>Хоррор-режим (темно, туман, фонарик)</span>
+      </label>
+      <p style="font-size:10px;color:#666;font-family:'Courier New',monospace;margin-top:-8px;margin-bottom:10px;">
+        Выключи, чтобы играть в светлом режиме
+      </p>
+    </div>
+
     <div class="settings-block">
       <h3>ПРОЧЕЕ</h3>
       <label class="toggle-label"><input type="checkbox" id="debugToggle"><span>Отладка</span></label>
       <button id="resetProgress" class="btn-danger">СБРОСИТЬ ПРОГРЕСС</button>
     </div>
+
     <div class="settings-block support-block">
       <h3>ПОДДЕРЖКА</h3>
       <a href="mailto:nemo94314@gmail.com?subject=ZOMBIESHOOT" class="btn-support">НАПИСАТЬ НА ПОЧТУ</a>
       <p class="support-email">nemo94314@gmail.com</p>
     </div>
+
     <button id="closeSettings" class="btn-primary">← НАЗАД</button>
   </div>
 </div>
@@ -224,7 +246,7 @@
 <!-- Three.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-<!-- EffectComposer для эффектов хоррора -->
+<!-- EffectComposer для хоррор-эффектов -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
@@ -235,17 +257,20 @@
 <!-- Игра -->
 <script src="game.js"></script>
 
-<!-- Фоновые частицы + музыка -->
+<!-- Фон меню + музыка + PWA -->
 <script>
+// Фоновые частицы для меню
 const bg = document.getElementById('bgCanvas');
 const bctx = bg.getContext('2d');
 function resizeBg(){ bg.width = innerWidth; bg.height = innerHeight; }
 resizeBg(); addEventListener('resize', resizeBg);
+
 const pts = Array.from({length: 80}, () => ({
   x: Math.random() * bg.width, y: Math.random() * bg.height,
   vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
   r: Math.random() * 2 + 0.5, a: Math.random() * 0.5 + 0.15
 }));
+
 function drawBG(){
   bctx.fillStyle = '#000'; bctx.fillRect(0, 0, bg.width, bg.height);
   const g = bctx.createRadialGradient(bg.width/2, bg.height/2, 100, bg.width/2, bg.height/2, Math.max(bg.width, bg.height)/1.5);
@@ -263,6 +288,8 @@ function drawBG(){
   requestAnimationFrame(drawBG);
 }
 drawBG();
+
+// Фоновая музыка (синтез)
 let musicCtx = null, musicPlaying = false, musicVolume = 0.3;
 function startMusic(){ if (musicPlaying) return; try { musicCtx = new (window.AudioContext || window.webkitAudioContext)(); musicPlaying = true; playAmbientMusic(); } catch(e){} }
 function playAmbientMusic(){
@@ -272,7 +299,9 @@ function playAmbientMusic(){
     const osc = musicCtx.createOscillator(), gain = musicCtx.createGain(), filter = musicCtx.createBiquadFilter();
     osc.type = 'sine'; osc.frequency.setValueAtTime(freq, now);
     filter.type = 'lowpass'; filter.frequency.setValueAtTime(500, now);
-    gain.gain.setValueAtTime(0, now); gain.gain.linearRampToValueAtTime(0.04 * musicVolume, now + 2); gain.gain.linearRampToValueAtTime(0, now + 6);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.04 * musicVolume, now + 2);
+    gain.gain.linearRampToValueAtTime(0, now + 6);
     osc.connect(filter); filter.connect(gain); gain.connect(musicCtx.destination);
     osc.start(now + i * 0.2); osc.stop(now + 6.5);
   });
@@ -282,6 +311,13 @@ function stopMusic(){ musicPlaying = false; if (musicCtx) { try { musicCtx.close
 window.stopBackgroundMusic = stopMusic;
 window.startBackgroundMusic = startMusic;
 window.setMusicVolume = (v) => { musicVolume = Math.max(0, Math.min(1, v)); };
+
+// PWA — регистрация Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error:', err));
+  });
+}
 </script>
 </body>
 </html>

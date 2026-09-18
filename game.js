@@ -523,3 +523,862 @@ function spawnEnemy(isBoss = false) {
     bossMaxHealth = e.userData.maxHealth;
   }
 }
+// ============ ПРОДОЛЖЕНИЕ ZOMBIESHOOT v15.0 ============
+
+// ---------- ИГРОВЫЕ ПЕРЕМЕННЫЕ ----------
+let gameStartTime = 0;
+let waveEnemiesRemaining = 0;
+let waveSpawnTimer = null;
+let messageTimeout = null;
+let currentSurvivalMode = null;
+
+// ---------- УТИЛИТЫ ----------
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+function randomRange(min, max) { return min + Math.random() * (max - min); }
+
+// ---------- ЗАПУСК ИГРЫ ----------
+function startGame(level = 1, survival = null) {
+  currentLevel = level;
+  survivalMode = survival;
+  survivalActive = !!survival;
+  score = 0;
+  health = 100;
+  wave = 1;
+  hitsTaken = 0;
+  medkits = 2;
+  enemies.forEach(e => scene.remove(e));
+  enemies = [];
+  enemyBullets.forEach(b => scene.remove(b));
+  enemyBullets = [];
+  grenades.forEach(g => scene.remove(g));
+  grenades = [];
+  lootCrates.forEach(l => scene.remove(l));
+  lootCrates = [];
+  corpses.forEach(c => scene.remove(c));
+  corpses = [];
+  bloodStains.forEach(b => scene.remove(b));
+  bloodStains = [];
+  currentBoss = null;
+  bossMaxHealth = 0;
+  isGameActive = true;
+  reloading = false;
+  lastShotTime = 0;
+  isMouseDown = false;
+  yaw = 0; pitch = 0; recoilPitch = 0;
+  verticalVelocity = 0; playerY = 1.7; isJumping = false;
+  bobPhase = 0; breathPhase = 0; shakeAmount = 0;
+  slowMotionFactor = 1.0; slowMotionTimer = 0;
+  keys.w = keys.a = keys.s = keys.d = false;
+
+  buildLevelEnvironment(level);
+  createWeapon(currentWeapon);
+  updateHUD();
+  showMessage(survival ? `Режим выживания: ${survival.name}` : `Уровень ${level}: ${LEVELS[level].name}`, 2000);
+  startHorrorAmbient();
+  startWave();
+  document.getElementById('mainMenu')?.classList.add('hidden');
+  document.getElementById('hud')?.classList.remove('hidden');
+  gameStartTime = performance.now();
+}
+
+function startWave() {
+  const lvl = LEVELS[currentLevel] || LEVELS[1];
+  const mode = survivalMode;
+  const maxEnemies = mode ? mode.maxEnemies : lvl.maxEnemies;
+  const spawnInterval = mode ? mode.spawnInterval : 3000;
+  waveEnemiesRemaining = mode ? 10 + wave * 3 : 5 + wave * 2;
+  showMessage(`Волна ${wave}`, 1500);
+  updateHUD();
+
+  if (waveSpawnTimer) clearInterval(waveSpawnTimer);
+  waveSpawnTimer = setInterval(() => {
+    if (!isGameActive) return;
+    if (enemies.length >= maxEnemies) return;
+    if (waveEnemiesRemaining <= 0) {
+      clearInterval(waveSpawnTimer);
+      waveSpawnTimer = null;
+      checkWaveComplete();
+      return;
+    }
+    spawnEnemy(false);
+    waveEnemiesRemaining--;
+  }, spawnInterval);
+}
+
+function checkWaveComplete() {
+  if (enemies.length === 0 && waveEnemiesRemaining <= 0) {
+    const lvl = LEVELS[currentLevel] || LEVELS[1];
+    if (wave >= lvl.waves && !lvl.boss) {
+      completeLevel();
+    } else if (lvl.boss && wave >= lvl.waves && !currentBoss) {
+      completeLevel();
+    } else {
+      wave++;
+      startWave();
+    }
+  }
+}
+
+function completeLevel() {
+  isGameActive = false;
+  if (waveSpawnTimer) clearInterval(waveSpawnTimer);
+  stopHorrorAmbient();
+  const lvl = LEVELS[currentLevel];
+  const stars = health > 75 ? 3 : health > 40 ? 2 : 1;
+  const coinsEarned = Math.floor(score / 10) + stars * 50;
+  PROGRESS.coins += coinsEarned;
+  PROGRESS.levels[currentLevel].completed = true;
+  PROGRESS.levels[currentLevel].stars = Math.max(PROGRESS.levels[currentLevel].stars, stars);
+  if (PROGRESS.levels[currentLevel + 1]) PROGRESS.levels[currentLevel + 1].unlocked = true;
+  saveProgress();
+  updateCoinsDisplay();
+  renderLevelGrid();
+  showMessage(`Уровень пройден! Звёзд: ${stars}, монет: ${coinsEarned}`, 4000);
+  setTimeout(() => {
+    document.getElementById('hud')?.classList.add('hidden');
+    showMainMenu();
+  }, 3000);
+}
+
+function gameOver() {
+  isGameActive = false;
+  if (waveSpawnTimer) clearInterval(waveSpawnTimer);
+  stopHorrorAmbient();
+  showMessage('Вы погибли...', 3000);
+  setTimeout(() => {
+    document.getElementById('hud')?.classList.add('hidden');
+    showMainMenu();
+  }, 2500);
+}
+
+// ---------- ОБНОВЛЕНИЕ ВРАГОВ ----------
+function updateEnemies(delta) {
+  if (!isGameActive) return;
+  const now = performance.now();
+  const playerPos = camera.position;
+
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const e = enemies[i];
+    const ud = e.userData;
+    if (ud.health <= 0) {
+      createCorpse(e);
+      if (ud.isBoss) {
+        currentBoss = null;
+        addScore(1000);
+        addCoins(200);
+        createLootCrate(e.position.clone(), 'sniper');
+      } else {
+        addScore(100);
+        if (Math.random() < 0.3) createLootCrate(e.position.clone(), ud.weaponDrop);
+      }
+      scene.remove(e);
+      enemies.splice(i, 1);
+      checkWaveComplete();
+      continue;
+    }
+
+    const dir = new THREE.Vector3().subVectors(playerPos, e.position);
+    dir.y = 0;
+    const dist = dir.length();
+    if (dist > 0.1) {
+      dir.normalize();
+      const speed = ud.speed * (survivalMode ? survivalMode.enemySpeed : 1);
+      const move = dir.clone().multiplyScalar(speed * delta);
+      const newPos = e.position.clone().add(move);
+      newPos.x = clamp(newPos.x, -46, 46);
+      newPos.z = clamp(newPos.z, -46, 46);
+      e.position.copy(newPos);
+      e.lookAt(playerPos.x, e.position.y, playerPos.z);
+    }
+
+    ud.walkPhase += delta * 6;
+    e.children.forEach((child, idx) => {
+      if (idx === 3 || idx === 4) {
+        child.rotation.x = Math.sin(ud.walkPhase) * 0.4;
+      }
+    });
+
+    if (now > ud.nextGroan) {
+      playZombieGroan(e.position);
+      ud.nextGroan = now + 3000 + Math.random() * 5000;
+    }
+
+    if (dist < (ud.isBoss ? 2.5 : 1.5)) {
+      if (now - ud.lastShot > 1000) {
+        ud.lastShot = now;
+        const dmg = (ud.isBoss ? 20 : 8) * (survivalMode ? survivalMode.enemyDamage : 1);
+        takeDamage(dmg);
+      }
+    }
+
+    if ((ud.type === 'shooter' || ud.type === 'grenadier') && now > ud.nextShotTime) {
+      if (dist < 30 && dist > 3) {
+        ud.nextShotTime = now + 1500 + Math.random() * 2000;
+        if (ud.type === 'shooter') {
+          enemyShoot(e, playerPos);
+        } else {
+          throwGrenade(e, playerPos);
+        }
+      }
+    }
+  }
+}
+
+function enemyShoot(e, target) {
+  const bullet = new THREE.Mesh(
+    new THREE.SphereGeometry(0.1, 6, 6),
+    new THREE.MeshBasicMaterial({ color: 0xff3300 })
+  );
+  bullet.position.copy(e.position).add(new THREE.Vector3(0, 1.2, 0));
+  const dir = new THREE.Vector3().subVectors(target, bullet.position).normalize();
+  bullet.userData = { velocity: dir.multiplyScalar(25), life: 3, damage: 10 };
+  scene.add(bullet);
+  enemyBullets.push(bullet);
+  playShootSoundEnhanced();
+}
+
+function throwGrenade(e, target) {
+  const grenade = new THREE.Mesh(
+    new THREE.SphereGeometry(0.15, 8, 8),
+    new THREE.MeshStandardMaterial({ color: 0x2a5a2a, metalness: 0.8, roughness: 0.2 })
+  );
+  grenade.position.copy(e.position).add(new THREE.Vector3(0, 1.2, 0));
+  const dir = new THREE.Vector3().subVectors(target, grenade.position).normalize();
+  grenade.userData = {
+    velocity: dir.multiplyScalar(12).add(new THREE.Vector3(0, 5, 0)),
+    life: 2.5,
+    damage: 40,
+    radius: 6
+  };
+  scene.add(grenade);
+  grenades.push(grenade);
+}
+
+// ---------- ПУЛИ И ГРАНАТЫ ----------
+function updateBullets(delta) {
+  for (let i = enemyBullets.length - 1; i >= 0; i--) {
+    const b = enemyBullets[i];
+    b.userData.life -= delta;
+    b.position.add(b.userData.velocity.clone().multiplyScalar(delta));
+    if (b.userData.life <= 0 || b.position.length() > 100) {
+      scene.remove(b);
+      enemyBullets.splice(i, 1);
+      continue;
+    }
+    if (b.position.distanceTo(camera.position) < 1) {
+      takeDamage(b.userData.damage * (survivalMode ? survivalMode.enemyDamage : 1));
+      scene.remove(b);
+      enemyBullets.splice(i, 1);
+    }
+  }
+
+  for (let i = grenades.length - 1; i >= 0; i--) {
+    const g = grenades[i];
+    g.userData.life -= delta;
+    g.userData.velocity.y -= GRAVITY * delta;
+    g.position.add(g.userData.velocity.clone().multiplyScalar(delta));
+    if (g.position.y < 0.2) {
+      g.userData.velocity.y *= -0.5;
+      g.position.y = 0.2;
+    }
+    if (g.userData.life <= 0) {
+      explodeGrenade(g.position, g.userData.damage, g.userData.radius);
+      scene.remove(g);
+      grenades.splice(i, 1);
+    }
+  }
+}
+
+function explodeGrenade(pos, damage, radius) {
+  playExplosionSound(pos);
+  const dist = pos.distanceTo(camera.position);
+  if (dist < radius) {
+    takeDamage(damage * (1 - dist / radius));
+  }
+  enemies.forEach(e => {
+    const d = pos.distanceTo(e.position);
+    if (d < radius) {
+      e.userData.health -= damage * (1 - d / radius);
+    }
+  });
+  const flash = new THREE.PointLight(0xff6600, 3, radius * 2);
+  flash.position.copy(pos);
+  scene.add(flash);
+  setTimeout(() => scene.remove(flash), 100);
+}
+
+// ---------- УРОН И ЗДОРОВЬЕ ----------
+function takeDamage(amount) {
+  if (!isGameActive) return;
+  health -= amount;
+  hitsTaken++;
+  shakeAmount = Math.min(1, shakeAmount + 0.3);
+  playHurtSoundEnhanced();
+  updateHUD();
+  if (health <= 0) {
+    health = 0;
+    gameOver();
+  }
+}
+
+function healPlayer(amount) {
+  health = Math.min(100, health + amount);
+  playHealSoundEnhanced();
+  updateHUD();
+}
+
+function useMedkit() {
+  if (medkits > 0 && health < 100) {
+    medkits--;
+    healPlayer(50);
+    updateHUD();
+  }
+}
+
+// ---------- ОЧКИ И МОНЕТЫ ----------
+function addScore(points) {
+  score += points;
+  updateHUD();
+}
+
+function addCoins(amount) {
+  PROGRESS.coins += amount;
+  saveProgress();
+  updateCoinsDisplay();
+}
+
+// ---------- ЛУТ ----------
+function createLootCrate(pos, weaponKey) {
+  const crate = new THREE.Mesh(
+    new THREE.BoxGeometry(0.6, 0.6, 0.6),
+    new THREE.MeshStandardMaterial({ color: 0x8a6a2a, metalness: 0.5, roughness: 0.5 })
+  );
+  crate.position.copy(pos);
+  crate.position.y = 0.3;
+  crate.userData = { weapon: weaponKey, ammo: WEAPONS[weaponKey]?.maxAmmo || 15 };
+  scene.add(crate);
+  lootCrates.push(crate);
+}
+
+function updateLoot(delta) {
+  const playerPos = camera.position;
+  nearLootCrate = null;
+  lootCrates.forEach(crate => {
+    crate.rotation.y += delta * 2;
+    if (crate.position.distanceTo(playerPos) < 2.5) {
+      nearLootCrate = crate;
+    }
+  });
+  if (nearLootCrate) {
+    showMessage('Нажмите E чтобы подобрать', 100);
+  }
+}
+
+function pickupLoot() {
+  if (!nearLootCrate) return;
+  const w = nearLootCrate.userData.weapon;
+  if (WEAPONS[w]) {
+    WEAPONS[w].ammo = WEAPONS[w].maxAmmo;
+    playPickupSound();
+    addScore(50);
+  }
+  scene.remove(nearLootCrate);
+  lootCrates = lootCrates.filter(c => c !== nearLootCrate);
+  nearLootCrate = null;
+  updateHUD();
+}
+
+// ---------- ТРУПЫ И КРОВЬ ----------
+function createCorpse(enemy) {
+  const corpse = enemy.clone();
+  corpse.rotation.x = Math.PI / 2;
+  corpse.position.y = 0.1;
+  corpse.traverse(child => { if (child.isMesh) child.material = child.material.clone(); });
+  scene.add(corpse);
+  corpses.push(corpse);
+  setTimeout(() => {
+    scene.remove(corpse);
+    corpses = corpses.filter(c => c !== corpse);
+  }, 10000);
+  createBloodStain(enemy.position);
+}
+
+function createBloodStain(pos) {
+  const stain = new THREE.Mesh(
+    new THREE.CircleGeometry(0.8, 8),
+    new THREE.MeshBasicMaterial({ color: 0x6a0000, transparent: true, opacity: 0.7 })
+  );
+  stain.rotation.x = -Math.PI / 2;
+  stain.position.set(pos.x, 0.02, pos.z);
+  scene.add(stain);
+  bloodStains.push(stain);
+  setTimeout(() => {
+    scene.remove(stain);
+    bloodStains = bloodStains.filter(s => s !== stain);
+  }, 15000);
+}
+
+// ---------- СТРЕЛЬБА ИГРОКА ----------
+function shoot() {
+  if (!isGameActive || reloading) return;
+  const w = WEAPONS[currentWeapon];
+  const now = performance.now();
+  if (now - lastShotTime < w.cooldown) return;
+  if (w.ammo <= 0) {
+    reload();
+    return;
+  }
+  lastShotTime = now;
+  w.ammo--;
+  playShootSoundEnhanced();
+  recoilPitch = 0.02 + Math.random() * 0.02;
+  shakeAmount = Math.min(1, shakeAmount + 0.1);
+
+  const pellets = w.pellets || 1;
+  for (let i = 0; i < pellets; i++) {
+    const spread = w.spread;
+    const dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+    dir.x += (Math.random() - 0.5) * spread * 2;
+    dir.y += (Math.random() - 0.5) * spread * 2;
+    dir.z += (Math.random() - 0.5) * spread * 2;
+    dir.normalize();
+
+    const raycaster = new THREE.Raycaster(camera.position, dir);
+    const intersects = raycaster.intersectObjects(enemies, true);
+    if (intersects.length > 0) {
+      const hit = intersects[0];
+      let enemyObj = hit.object;
+      while (enemyObj.parent && !enemies.includes(enemyObj)) enemyObj = enemyObj.parent;
+      if (enemies.includes(enemyObj)) {
+        const dmg = w.damage;
+        enemyObj.userData.health -= dmg;
+        playHitSoundEnhanced();
+        addScore(10);
+      }
+    } else {
+      const wallIntersects = raycaster.intersectObjects(obstacles, true);
+      if (wallIntersects.length > 0) {
+        createBulletHole(wallIntersects[0].point, wallIntersects[0].face.normal);
+      }
+    }
+  }
+  updateHUD();
+}
+
+function createBulletHole(pos, normal) {
+  const hole = new THREE.Mesh(
+    new THREE.CircleGeometry(0.05, 6),
+    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.8 })
+  );
+  hole.position.copy(pos).add(normal.clone().multiplyScalar(0.01));
+  hole.lookAt(pos.clone().add(normal));
+  scene.add(hole);
+  setTimeout(() => scene.remove(hole), 5000);
+}
+
+function reload() {
+  if (reloading) return;
+  const w = WEAPONS[currentWeapon];
+  if (w.ammo === w.maxAmmo) return;
+  reloading = true;
+  playReloadSoundEnhanced();
+  showMessage('Перезарядка...', w.reload);
+  setTimeout(() => {
+    w.ammo = w.maxAmmo;
+    reloading = false;
+    updateHUD();
+  }, w.reload);
+}
+
+function switchWeapon(key) {
+  if (!WEAPONS[key]) return;
+  if (!PROGRESS.ownedWeapons.includes(key)) return;
+  currentWeapon = key;
+  createWeapon(key);
+  updateHUD();
+}
+
+// ---------- УПРАВЛЕНИЕ ----------
+function setupControls() {
+  document.addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
+    if (k === 'w') keys.w = true;
+    if (k === 'a') keys.a = true;
+    if (k === 's') keys.s = true;
+    if (k === 'd') keys.d = true;
+    if (k === 'r') reload();
+    if (k === 'e') pickupLoot();
+    if (k === 'q') useMedkit();
+    if (k === '1') switchWeapon('pistol');
+    if (k === '2') switchWeapon('rifle');
+    if (k === '3') switchWeapon('shotgun');
+    if (k === '4') switchWeapon('sniper');
+    if (k === '5') switchWeapon('dualPistols');
+    if (k === '6') switchWeapon('flamethrower');
+    if (k === 'f') { if (flashlight) flashlight.visible = !flashlight.visible; }
+    if (k === 'escape') { if (isGameActive) { isGameActive = false; stopHorrorAmbient(); showMainMenu(); } }
+    if (k === ' ') { e.preventDefault(); jump(); }
+  });
+  document.addEventListener('keyup', (e) => {
+    const k = e.key.toLowerCase();
+    if (k === 'w') keys.w = false;
+    if (k === 'a') keys.a = false;
+    if (k === 's') keys.s = false;
+    if (k === 'd') keys.d = false;
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isGameActive) return;
+    if (document.pointerLockElement === renderer.domElement) {
+      yaw -= e.movementX * MOUSE_SENSITIVITY;
+      pitch -= e.movementY * MOUSE_SENSITIVITY;
+      pitch = clamp(pitch, -Math.PI / 2 + 0.1, Math.PI / 2 - 0.1);
+    }
+  });
+  document.addEventListener('mousedown', (e) => {
+    if (!isGameActive) return;
+    if (e.button === 0) {
+      isMouseDown = true;
+      if (!document.pointerLockElement) renderer.domElement.requestPointerLock();
+      shoot();
+    }
+  });
+  document.addEventListener('mouseup', (e) => {
+    if (e.button === 0) isMouseDown = false;
+  });
+
+  if (isMobile) {
+    setupMobileControls();
+  }
+}
+
+function jump() {
+  if (!isJumping && isGameActive) {
+    verticalVelocity = JUMP_POWER;
+    isJumping = true;
+  }
+}
+
+function setupMobileControls() {
+  const joystickZone = document.getElementById('joystickZone');
+  const lookZone = document.getElementById('lookZone');
+  if (!joystickZone || !lookZone) return;
+
+  joystickZone.addEventListener('touchstart', (e) => {
+    const t = e.changedTouches[0];
+    joystickActive = true;
+    joystickTouchId = t.identifier;
+    joystickStartX = t.clientX;
+    joystickStartY = t.clientY;
+    joystickDeltaX = 0;
+    joystickDeltaY = 0;
+  }, { passive: true });
+
+  joystickZone.addEventListener('touchmove', (e) => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === joystickTouchId) {
+        joystickDeltaX = t.clientX - joystickStartX;
+        joystickDeltaY = t.clientY - joystickStartY;
+        const maxDist = 50;
+        const dist = Math.hypot(joystickDeltaX, joystickDeltaY);
+        if (dist > maxDist) {
+          joystickDeltaX = (joystickDeltaX / dist) * maxDist;
+          joystickDeltaY = (joystickDeltaY / dist) * maxDist;
+        }
+      }
+    }
+  }, { passive: true });
+
+  joystickZone.addEventListener('touchend', (e) => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === joystickTouchId) {
+        joystickActive = false;
+        joystickTouchId = null;
+        joystickDeltaX = 0;
+        joystickDeltaY = 0;
+      }
+    }
+  }, { passive: true });
+
+  lookZone.addEventListener('touchstart', (e) => {
+    const t = e.changedTouches[0];
+    lookTouchId = t.identifier;
+    lookLastX = t.clientX;
+    lookLastY = t.clientY;
+  }, { passive: true });
+
+  lookZone.addEventListener('touchmove', (e) => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === lookTouchId) {
+        const dx = t.clientX - lookLastX;
+        const dy = t.clientY - lookLastY;
+        yaw -= dx * 0.005;
+        pitch -= dy * 0.005;
+        pitch = clamp(pitch, -Math.PI / 2 + 0.1, Math.PI / 2 - 0.1);
+        lookLastX = t.clientX;
+        lookLastY = t.clientY;
+      }
+    }
+  }, { passive: true });
+
+  lookZone.addEventListener('touchend', (e) => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === lookTouchId) {
+        lookTouchId = null;
+      }
+    }
+  }, { passive: true });
+}
+
+// ---------- ОБНОВЛЕНИЕ ИГРОКА ----------
+function updatePlayer(delta) {
+  if (!isGameActive) return;
+  const speed = 5.0 * (isMobile ? 0.8 : 1);
+  const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+  const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+  const move = new THREE.Vector3();
+
+  if (keys.w) move.add(forward);
+  if (keys.s) move.sub(forward);
+  if (keys.a) move.sub(right);
+  if (keys.d) move.add(right);
+
+  if (isMobile && joystickActive) {
+    move.add(forward.clone().multiplyScalar(-joystickDeltaY / 50));
+    move.add(right.clone().multiplyScalar(joystickDeltaX / 50));
+  }
+
+  if (move.length() > 0) {
+    move.normalize();
+    const newPos = camera.position.clone().add(move.multiplyScalar(speed * delta));
+    let canMove = true;
+    for (const obs of obstacles) {
+      if (obs.userData.size) {
+        const half = new THREE.Vector3(obs.userData.size.x / 2, 0, obs.userData.size.z / 2);
+        if (Math.abs(newPos.x - obs.position.x) < half.x + 0.5 &&
+            Math.abs(newPos.z - obs.position.z) < half.z + 0.5) {
+          canMove = false;
+          break;
+        }
+      }
+    }
+    if (canMove) {
+      newPos.x = clamp(newPos.x, -47, 47);
+      newPos.z = clamp(newPos.z, -47, 47);
+      camera.position.x = newPos.x;
+      camera.position.z = newPos.z;
+    }
+    if (footstepTimer <= 0) {
+      playFootstepSound();
+      footstepTimer = 0.5;
+    }
+  }
+
+  if (isJumping) {
+    verticalVelocity -= GRAVITY * delta;
+    playerY += verticalVelocity * delta;
+    if (playerY <= 1.7) {
+      playerY = 1.7;
+      verticalVelocity = 0;
+      isJumping = false;
+    }
+  }
+  camera.position.y = playerY;
+
+  bobPhase += delta * (move.length() > 0 ? 10 : 2);
+  breathPhase += delta * 1.5;
+  const bobAmount = move.length() > 0 ? 0.05 : 0.01;
+  camera.position.y += Math.sin(bobPhase) * bobAmount;
+  camera.position.x += Math.cos(bobPhase * 0.5) * bobAmount * 0.5;
+
+  camera.rotation.order = 'YXZ';
+  camera.rotation.y = yaw;
+  camera.rotation.x = pitch + recoilPitch;
+  recoilPitch *= 0.9;
+
+  if (shakeAmount > 0) {
+    camera.rotation.x += (Math.random() - 0.5) * shakeAmount * 0.05;
+    camera.rotation.y += (Math.random() - 0.5) * shakeAmount * 0.05;
+    shakeAmount *= 0.9;
+  }
+
+  footstepTimer -= delta;
+}
+
+// ---------- АНИМАЦИЯ ----------
+function animate() {
+  requestAnimationFrame(animate);
+  const delta = Math.min(clock.getDelta(), 0.1);
+
+  if (isGameActive) {
+    updatePlayer(delta);
+    updateEnemies(delta);
+    updateBullets(delta);
+    updateLoot(delta);
+  }
+
+  if (isMouseDown && isGameActive) {
+    const w = WEAPONS[currentWeapon];
+    if (w.auto) shoot();
+  }
+
+  if (isGameActive && performance.now() % 100 < 20) updateHUD();
+
+  if (composer) {
+    composer.render();
+  } else {
+    renderer.render(scene, camera);
+  }
+}
+
+// ---------- UI ----------
+function setupUI() {
+  if (!document.getElementById('hud')) {
+    const hud = document.createElement('div');
+    hud.id = 'hud';
+    hud.className = 'hidden';
+    hud.innerHTML = `
+      <div id="healthBar"><div id="healthFill"></div></div>
+      <div id="ammoDisplay">Патроны: <span id="ammoCount">30</span></div>
+      <div id="scoreDisplay">Очки: <span id="scoreValue">0</span></div>
+      <div id="waveDisplay">Волна: <span id="waveValue">1</span></div>
+      <div id="medkitDisplay">Аптечки: <span id="medkitCount">2</span></div>
+      <div id="messageBox"></div>
+    `;
+    document.body.appendChild(hud);
+  }
+
+  if (!document.getElementById('mainMenu')) {
+    const menu = document.createElement('div');
+    menu.id = 'mainMenu';
+    menu.innerHTML = `
+      <h1>ZOMBIESHOOT v15.0</h1>
+      <div id="levelGrid"></div>
+      <div id="coinsDisplay">Монеты: <span id="coinsValue">0</span></div>
+      <button id="survivalBtn">Режим выживания</button>
+      <button id="shopBtn">Магазин</button>
+      <button id="horrorToggle">Хоррор-режим: ВКЛ</button>
+      <button id="resetBtn">Сбросить прогресс</button>
+    `;
+    document.body.appendChild(menu);
+
+    document.getElementById('survivalBtn').onclick = () => {
+      const mode = prompt('Выберите режим: easy, normal, hard, nightmare', 'normal');
+      if (SURVIVAL_MODES[mode]) startGame(1, SURVIVAL_MODES[mode]);
+    };
+    document.getElementById('shopBtn').onclick = showShop;
+    document.getElementById('horrorToggle').onclick = toggleHorrorMode;
+    document.getElementById('resetBtn').onclick = () => { if (confirm('Сбросить прогресс?')) resetProgress(); };
+  }
+
+  const style = document.createElement('style');
+  style.textContent = `
+    #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; font-family: monospace; color: #fff; }
+    #healthBar { position: absolute; bottom: 20px; left: 20px; width: 200px; height: 20px; background: #333; border: 2px solid #fff; }
+    #healthFill { height: 100%; width: 100%; background: #c00; transition: width 0.2s; }
+    #ammoDisplay, #scoreDisplay, #waveDisplay, #medkitDisplay { position: absolute; bottom: 50px; right: 20px; background: rgba(0,0,0,0.5); padding: 5px 10px; }
+    #scoreDisplay { top: 20px; left: 20px; bottom: auto; right: auto; }
+    #waveDisplay { top: 20px; left: 50%; transform: translateX(-50%); bottom: auto; right: auto; }
+    #medkitDisplay { bottom: 80px; right: 20px; }
+    #messageBox { position: absolute; top: 30%; left: 50%; transform: translateX(-50%); font-size: 24px; text-align: center; text-shadow: 2px 2px 4px #000; }
+    #mainMenu { position: fixed; inset: 0; background: rgba(0,0,0,0.9); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; font-family: monospace; }
+    #mainMenu.hidden, #hud.hidden { display: none; }
+    #levelGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 20px; }
+    .levelBtn { padding: 10px; background: #333; border: 2px solid #666; color: #fff; cursor: pointer; }
+    .levelBtn.unlocked { border-color: #0f0; }
+    .levelBtn.completed { background: #060; }
+    .levelBtn.locked { opacity: 0.5; cursor: not-allowed; }
+    #coinsDisplay { margin: 10px; font-size: 20px; }
+    button { padding: 10px 20px; margin: 5px; background: #444; color: #fff; border: 2px solid #888; cursor: pointer; font-size: 16px; }
+    button:hover { background: #666; }
+  `;
+  document.head.appendChild(style);
+
+  if (isMobile) {
+    const mobileUI = document.createElement('div');
+    mobileUI.id = 'mobileUI';
+    mobileUI.innerHTML = `
+      <div id="joystickZone" style="position:fixed;bottom:20px;left:20px;width:120px;height:120px;background:rgba(255,255,255,0.1);border-radius:50%;z-index:20;"></div>
+      <div id="lookZone" style="position:fixed;top:0;right:0;width:50%;height:100%;z-index:19;"></div>
+      <button id="shootBtn" style="position:fixed;bottom:30px;right:30px;width:80px;height:80px;border-radius:50%;z-index:21;">🔫</button>
+      <button id="reloadBtn" style="position:fixed;bottom:120px;right:30px;width:60px;height:60px;border-radius:50%;z-index:21;">🔄</button>
+    `;
+    document.body.appendChild(mobileUI);
+    document.getElementById('shootBtn').addEventListener('touchstart', (e) => { e.preventDefault(); shoot(); });
+    document.getElementById('reloadBtn').addEventListener('touchstart', (e) => { e.preventDefault(); reload(); });
+  }
+}
+
+function updateHUD() {
+  const healthFill = document.getElementById('healthFill');
+  if (healthFill) healthFill.style.width = `${health}%`;
+  const ammoCount = document.getElementById('ammoCount');
+  if (ammoCount) ammoCount.textContent = `${WEAPONS[currentWeapon]?.ammo || 0} / ${WEAPONS[currentWeapon]?.maxAmmo || 0}`;
+  const scoreValue = document.getElementById('scoreValue');
+  if (scoreValue) scoreValue.textContent = score;
+  const waveValue = document.getElementById('waveValue');
+  if (waveValue) waveValue.textContent = wave;
+  const medkitCount = document.getElementById('medkitCount');
+  if (medkitCount) medkitCount.textContent = medkits;
+}
+
+function showMessage(text, duration = 2000) {
+  const msg = document.getElementById('messageBox');
+  if (!msg) return;
+  msg.textContent = text;
+  if (messageTimeout) clearTimeout(messageTimeout);
+  messageTimeout = setTimeout(() => { msg.textContent = ''; }, duration);
+}
+
+function renderLevelGrid() {
+  const grid = document.getElementById('levelGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  for (let i = 1; i <= 8; i++) {
+    const lvl = LEVELS[i];
+    const prog = PROGRESS.levels[i];
+    const btn = document.createElement('button');
+    btn.className = `levelBtn ${prog.unlocked ? 'unlocked' : 'locked'} ${prog.completed ? 'completed' : ''}`;
+    btn.innerHTML = `${lvl.icon} ${lvl.name}<br>${'★'.repeat(prog.stars)}${'☆'.repeat(3 - prog.stars)}`;
+    btn.disabled = !prog.unlocked;
+    btn.onclick = () => { if (prog.unlocked) startGame(i); };
+    grid.appendChild(btn);
+  }
+}
+
+function updateCoinsDisplay() {
+  const el = document.getElementById('coinsValue');
+  if (el) el.textContent = PROGRESS.coins;
+}
+
+function showMainMenu() {
+  document.getElementById('mainMenu')?.classList.remove('hidden');
+  document.getElementById('hud')?.classList.add('hidden');
+  renderLevelGrid();
+  updateCoinsDisplay();
+}
+
+function showShop() {
+  alert('Магазин в разработке. Монеты: ' + PROGRESS.coins);
+}
+
+function toggleHorrorMode() {
+  horrorMode = !horrorMode;
+  try { localStorage.setItem('zombieshoot_horror', horrorMode); } catch(e){}
+  const btn = document.getElementById('horrorToggle');
+  if (btn) btn.textContent = `Хоррор-режим: ${horrorMode ? 'ВКЛ' : 'ВЫКЛ'}`;
+  if (isGameActive) buildLevelEnvironment(currentLevel);
+}
+
+// ---------- ЗАПУСК ----------
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  if (composer) composer.setSize(innerWidth, innerHeight);
+});
+
+window.addEventListener('load', () => {
+  init();
+});

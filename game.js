@@ -1,5 +1,5 @@
-// ============ ZOMBIESHOOT v6.0 ============
-// Упрощённое надёжное движение + стрельба + прыжок
+// ============ ZOMBIESHOOT v6.1 ============
+// Исправлена стрельба через pointer lock
 
 let scene, camera, renderer;
 let score = 0, health = 100, wave = 1;
@@ -43,7 +43,6 @@ function init() {
   renderer.domElement.style.zIndex = '1';
   document.body.appendChild(renderer.domElement);
 
-  // Свет
   scene.add(new THREE.AmbientLight(0xffffff, 0.6));
   const sun = new THREE.DirectionalLight(0xfff0d0, 1);
   sun.position.set(40, 60, 20);
@@ -64,8 +63,6 @@ function init() {
   setupControls();
   animate();
   updateHUD();
-
-  console.log('✅ Игра инициализирована. Управление: WASD, мышь, ЛКМ, Space, R, 1/2/3');
 }
 
 // ============================================
@@ -88,7 +85,6 @@ function createGround() {
   road.position.y = 0.02;
   scene.add(road);
 
-  // Трава
   const gGeo = new THREE.PlaneGeometry(0.4, 0.9);
   const gMat = new THREE.MeshStandardMaterial({ color: 0x5a8a3a, side: THREE.DoubleSide });
   const count = 500;
@@ -113,7 +109,6 @@ function createGround() {
 function createBase() {
   const wallMat = new THREE.MeshStandardMaterial({ color: 0x5a5a5a });
 
-  // Внешние стены
   [
     { pos:[0,2,-50], size:[100,4,1] },
     { pos:[0,2,50],  size:[100,4,1] },
@@ -128,7 +123,6 @@ function createBase() {
     obstacles.push(wall);
   });
 
-  // HESCO блоки
   const hescoMat = new THREE.MeshStandardMaterial({ color: 0x8a7a5a, roughness: 0.95 });
   [
     [12,1.5,8,3,3,2],[-12,1.5,8,3,3,2],[12,1.5,-8,3,3,2],[-12,1.5,-8,3,3,2],
@@ -142,7 +136,6 @@ function createBase() {
     obstacles.push(h);
   });
 
-  // Ящики
   const crateMat = new THREE.MeshStandardMaterial({ color: 0x6a552a });
   [[8,0.6,3],[-8,0.6,3],[8,0.6,-3],[-8,0.6,-3],[15,0.6,0],[-15,0.6,0]].forEach(([x,y,z]) => {
     const c = new THREE.Mesh(new THREE.BoxGeometry(1.2,1.2,1.2), crateMat);
@@ -153,7 +146,6 @@ function createBase() {
     obstacles.push(c);
   });
 
-  // Бочки
   const bMat = new THREE.MeshStandardMaterial({ color: 0x8a2a2a, metalness: 0.4 });
   [[18,0.6,18],[-18,0.6,18],[18,0.6,-18],[-18,0.6,-18]].forEach(([x,y,z]) => {
     const b = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,1.2,12), bMat);
@@ -164,7 +156,6 @@ function createBase() {
     obstacles.push(b);
   });
 
-  // Вышка
   const tMat = new THREE.MeshStandardMaterial({ color: 0x4a3a2a });
   const tBase = new THREE.Mesh(new THREE.BoxGeometry(4,6,4), tMat);
   tBase.position.set(-35, 3, 25);
@@ -305,13 +296,11 @@ function spawnEnemy() {
 }
 
 // ============================================
-// КОЛЛИЗИИ (упрощённые)
+// КОЛЛИЗИИ
 // ============================================
 function checkCollision(pos, r) {
-  // Границы карты
   if (Math.abs(pos.x) > 48.5 || Math.abs(pos.z) > 48.5) return true;
 
-  // Препятствия
   for (const o of obstacles) {
     if (!o.userData.size) continue;
     const hx = o.userData.size.x / 2;
@@ -464,13 +453,12 @@ function playHitSound() {
 }
 
 // ============================================
-// УПРАВЛЕНИЕ — САМОЕ ВАЖНОЕ
+// УПРАВЛЕНИЕ — ФИКС: стрельба на document
 // ============================================
 function setupControls() {
 
   // --- КЛАВИАТУРА ---
-  window.addEventListener('keydown', (e) => {
-    console.log('Key down:', e.code);
+  document.addEventListener('keydown', (e) => {
     if (!isGameActive) return;
 
     if (e.code === 'KeyW') keys.w = true;
@@ -483,7 +471,6 @@ function setupControls() {
       if (!isJumping) {
         verticalVelocity = JUMP_POWER;
         isJumping = true;
-        console.log('🦘 Прыжок!');
       }
     }
 
@@ -493,33 +480,34 @@ function setupControls() {
     if (e.code === 'Digit3') { currentWeapon = 'shotgun'; createWeapon('shotgun'); updateHUD(); }
   });
 
-  window.addEventListener('keyup', (e) => {
+  document.addEventListener('keyup', (e) => {
     if (e.code === 'KeyW') keys.w = false;
     if (e.code === 'KeyS') keys.s = false;
     if (e.code === 'KeyA') keys.a = false;
     if (e.code === 'KeyD') keys.d = false;
   });
 
-  // --- МЫШЬ (клик = захват + выстрел) ---
-  renderer.domElement.addEventListener('click', () => {
+  // --- ЗАХВАТ МЫШИ при клике ---
+  document.addEventListener('click', () => {
     if (isGameActive && !document.pointerLockElement) {
       renderer.domElement.requestPointerLock();
     }
   });
 
-  renderer.domElement.addEventListener('mousedown', (e) => {
-    if (e.button !== 0 || !isGameActive) return;
+  // --- ФИКС: СТРЕЛЬБА на document (не на canvas) ---
+  document.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    if (!isGameActive) return;
     isMouseDown = true;
     shoot();
-    console.log('💥 Выстрел!');
   });
 
-  window.addEventListener('mouseup', (e) => {
+  document.addEventListener('mouseup', (e) => {
     if (e.button === 0) isMouseDown = false;
   });
 
   // --- ДВИЖЕНИЕ МЫШИ ---
-  window.addEventListener('mousemove', (e) => {
+  document.addEventListener('mousemove', (e) => {
     if (document.pointerLockElement === renderer.domElement) {
       yaw -= e.movementX * MOUSE_SENSITIVITY;
       pitch -= e.movementY * MOUSE_SENSITIVITY;
@@ -564,7 +552,6 @@ function updatePlayer(delta) {
     }
   }
 
-  // Прыжок / гравитация
   verticalVelocity -= GRAVITY * delta;
   playerY += verticalVelocity * delta;
   if (playerY <= 1.7) {
@@ -574,20 +561,17 @@ function updatePlayer(delta) {
   }
   camera.position.y = playerY;
 
-  // Отдача
   recoilPitch *= 0.88;
   camera.rotation.order = 'YXZ';
   camera.rotation.y = yaw;
   camera.rotation.x = pitch + recoilPitch;
 
-  // Покачивание оружия
   if (weaponGroup) {
     const t = performance.now() / 220;
     const bob = moved ? Math.sin(t) * 0.012 : 0;
     weaponGroup.position.y = -0.26 + bob;
   }
 
-  // Автострельба
   if (isMouseDown && WEAPONS[currentWeapon].auto && canShoot && !reloading) {
     shoot();
   }
@@ -626,6 +610,7 @@ function updateEnemies(delta) {
 
 function showDamage() {
   const v = document.getElementById('damageVignette');
+  if (!v) return;
   v.style.opacity = '0.8';
   setTimeout(() => v.style.opacity = '0', 150);
 }
@@ -643,10 +628,13 @@ function animate() {
 // ============================================
 function updateHUD() {
   const w = WEAPONS[currentWeapon];
-  document.getElementById('score').textContent = 'Счёт: ' + score + ' | Волна: ' + wave;
-  document.getElementById('health').textContent = '❤️ ' + Math.max(0, Math.floor(health));
-  const a = document.getElementById('ammo');
-  if (a) a.textContent = reloading ? '🔄 Перезарядка...' : '🔫 ' + w.name + ' ' + w.ammo + ' / ' + w.maxAmmo;
+  const scoreEl = document.getElementById('score');
+  const healthEl = document.getElementById('health');
+  const ammoEl = document.getElementById('ammo');
+
+  if (scoreEl) scoreEl.textContent = 'Счёт: ' + score + ' | Волна: ' + wave;
+  if (healthEl) healthEl.textContent = '❤️ ' + Math.max(0, Math.floor(health));
+  if (ammoEl) ammoEl.textContent = reloading ? '🔄 Перезарядка...' : '🔫 ' + w.name + ' ' + w.ammo + ' / ' + w.maxAmmo;
 }
 
 function nextWave() {
@@ -678,15 +666,7 @@ function startGame() {
   updateHUD();
 
   if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-
-  // Автоматический pointer lock при старте
-  setTimeout(() => {
-    if (renderer.domElement.requestPointerLock) {
-      renderer.domElement.requestPointerLock();
-    }
-  }, 100);
-
-  console.log('🎮 Игра началась! Управление: WASD, ЛКМ, Space');
+  // Pointer lock будет запрошен при первом клике
 }
 
 function gameOver() {

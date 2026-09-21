@@ -1828,4 +1828,249 @@ function updateHUD(){
   const am = document.getElementById('ammo');
   if (am){
     const w = WEAPONS[currentWeapon];
-    am.innerHTML = `<svg class="ico-hud"><use href="#icon-${w.icon}"/></svg> ${w.ammo}/${
+    am.innerHTML = `<svg class="ico-hud"><use href="#icon-${w.icon}"/></svg> ${w.ammo}/${w.maxAmmo}`;
+  }
+  const md = document.getElementById('medkits');
+  if (md) md.innerHTML = `<svg class="ico-hud"><use href="#icon-medkit"/></svg> x${medkits}`;
+  const gr = document.getElementById('grenades');
+  if (gr) gr.innerHTML = `<svg class="ico-hud"><use href="#icon-grenade"/></svg> x${playerGrenades}`;
+  const bb = document.getElementById('bossBar');
+  if (bb){
+    if (currentBoss && currentBoss.userData){
+      bb.style.display = 'block';
+      const r = currentBoss.userData.health / currentBoss.userData.maxHealth;
+      const fill = document.getElementById('bossHealthFill');
+      if (fill) fill.style.width = (r*100) + '%';
+      const nm = document.getElementById('bossName');
+      if (nm) nm.innerHTML = `<svg class="ico-hud"><use href="#icon-skull"/></svg> БОСС — ФАЗА ${bossPhase}`;
+    } else bb.style.display = 'none';
+  }
+}
+let toastEl = null, toastTimeout = null;
+function showToast(text, duration = 2000){
+  if (!toastEl){
+    toastEl = document.createElement('div');
+    toastEl.style.cssText = 'position:fixed;top:25%;left:50%;transform:translateX(-50%);font-size:22px;color:#fff;text-shadow:2px 2px 8px #000;font-family:Impact,sans-serif;letter-spacing:2px;pointer-events:none;z-index:80;transition:opacity 0.3s;text-align:center;';
+    document.body.appendChild(toastEl);
+  }
+  toastEl.textContent = text;
+  toastEl.style.opacity = '1';
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => { toastEl.style.opacity = '0'; }, duration);
+}
+function renderShop(tab = 'weapons'){
+  const body = document.getElementById('shopContent');
+  if (!body) return;
+  updateCoinsDisplay();
+  if (tab === 'weapons'){
+    let html = '<div class="shop-grid">';
+    for (const key in WEAPONS){
+      const w = WEAPONS[key];
+      const owned = PROGRESS.ownedWeapons.includes(key);
+      const eq = currentWeapon === key;
+      let btn = 'КУПИТЬ', dis = false;
+      if (eq){ btn = '✅ ВЫБРАНО'; dis = true; }
+      else if (owned) btn = 'ВЫБРАТЬ';
+      else if (PROGRESS.coins < w.cost){ btn = 'МАЛО МОНЕТ'; dis = true; }
+      html += `<div class="shop-item ${owned?'owned':''} ${eq?'equipped':''}"><svg class="item-icon"><use href="#icon-${w.icon}"/></svg><div class="item-name">${w.name}</div><div class="item-desc">Урон: ${w.damage} | Магазин: ${w.maxAmmo}<br>${w.auto?'Авто':'Одиночный'}</div><div class="item-price"><svg class="ico-sm"><use href="#icon-coin"/></svg> ${owned?(eq?'—':'Куплено'):w.cost}</div><button class="item-btn ${eq?'equipped-btn':''}" ${dis?'disabled':''} onclick="handleWeapon('${key}')">${btn}</button></div>`;
+    }
+    html += '</div>';
+    body.innerHTML = html;
+  } else if (tab === 'skins'){
+    let html = '<div class="shop-grid">';
+    for (const key in SKINS){
+      const sk = SKINS[key];
+      const owned = PROGRESS.ownedSkins.includes(key);
+      const eq = PROGRESS.currentSkin === key;
+      let btn = 'КУПИТЬ', dis = false;
+      if (eq){ btn = '✅ НАДЕТ'; dis = true; }
+      else if (owned) btn = 'НАДЕТЬ';
+      else if (PROGRESS.coins < sk.cost){ btn = 'МАЛО МОНЕТ'; dis = true; }
+      html += `<div class="shop-item ${owned?'owned':''} ${eq?'equipped':''}"><div class="item-icon">👤</div><div class="item-name">${sk.name}</div><div class="item-desc">Цвет зомби</div><div class="item-price"><svg class="ico-sm"><use href="#icon-coin"/></svg> ${owned?(eq?'—':'Куплено'):sk.cost}</div><button class="item-btn ${eq?'equipped-btn':''}" ${dis?'disabled':''} onclick="handleSkin('${key}')">${btn}</button></div>`;
+    }
+    html += '</div>';
+    body.innerHTML = html;
+  }
+}
+function handleWeapon(key){
+  if (PROGRESS.ownedWeapons.includes(key)){ switchWeapon(key); playClickSound(500, 0.05); }
+  else {
+    const w = WEAPONS[key];
+    if (PROGRESS.coins >= w.cost){
+      PROGRESS.coins -= w.cost; PROGRESS.ownedWeapons.push(key);
+      saveProgress(); playBuySound(); switchWeapon(key);
+    } else playErrorSound();
+  }
+  updateCoinsDisplay(); renderShop('weapons'); checkAchConditions();
+}
+function handleSkin(key){
+  if (PROGRESS.ownedSkins.includes(key)){ PROGRESS.currentSkin = key; saveProgress(); playClickSound(500, 0.05); }
+  else {
+    const sk = SKINS[key];
+    if (PROGRESS.coins >= sk.cost){
+      PROGRESS.coins -= sk.cost; PROGRESS.ownedSkins.push(key); PROGRESS.currentSkin = key;
+      saveProgress(); playBuySound();
+    } else playErrorSound();
+  }
+  updateCoinsDisplay(); renderShop('skins'); checkAchConditions();
+}
+window.handleWeapon = handleWeapon;
+window.handleSkin = handleSkin;
+
+// ============ УПРАВЛЕНИЕ ============
+function setupControls(){
+  document.addEventListener('keydown', e => {
+    const k = e.code;
+    if (k === 'KeyW') keys.w = true;
+    if (k === 'KeyA') keys.a = true;
+    if (k === 'KeyS') keys.s = true;
+    if (k === 'KeyD') keys.d = true;
+    if (k === 'KeyR') reload();
+    if (k === 'KeyE') pickupLoot();
+    if (k === 'KeyQ') useMedkit();
+    if (k === 'KeyG') throwPlayerGrenade();
+    if (k === 'KeyF'){ if (flashlight) flashlight.visible = !flashlight.visible; }
+    if (k === 'Digit1') switchWeapon('pistol');
+    if (k === 'Digit2') switchWeapon('rifle');
+    if (k === 'Digit3') switchWeapon('shotgun');
+    if (k === 'Digit4') switchWeapon('sniper');
+    if (k === 'Digit5') switchWeapon('dualPistols');
+    if (k === 'Digit6') switchWeapon('flamethrower');
+    if (k === 'Escape'){
+      if (isGameActive){
+        isGameActive = false;
+        stopHorrorAmbient(); stopDynamicMusic();
+        document.getElementById('hud').style.display = 'none';
+        document.getElementById('tutorialHUD').style.display = 'none';
+        document.getElementById('menu').style.display = 'flex';
+        renderer.domElement.style.display = 'none';
+        if (document.pointerLockElement) document.exitPointerLock();
+      }
+    }
+    if (k === 'Space'){ e.preventDefault(); jump(); }
+  });
+  document.addEventListener('keyup', e => {
+    const k = e.code;
+    if (k === 'KeyW') keys.w = false;
+    if (k === 'KeyA') keys.a = false;
+    if (k === 'KeyS') keys.s = false;
+    if (k === 'KeyD') keys.d = false;
+  });
+  document.addEventListener('mousemove', e => {
+    if (!isGameActive) return;
+    if (document.pointerLockElement === renderer.domElement){
+      if (e.movementX !== 0 || e.movementY !== 0){
+        yaw -= e.movementX * MOUSE_SENSITIVITY;
+        pitch -= e.movementY * MOUSE_SENSITIVITY;
+        pitch = clamp(pitch, -Math.PI/2 + 0.1, Math.PI/2 - 0.1);
+        if (tutorialState && !tutorialState.looked && (Math.abs(e.movementX) > 3 || Math.abs(e.movementY) > 3)){
+          tutorialState.looked = true; markTutStep('look');
+        }
+      }
+    }
+  });
+  document.addEventListener('mousedown', e => {
+    if (!isGameActive) return;
+    if (e.button === 0){
+      isMouseDown = true;
+      if (!document.pointerLockElement) renderer.domElement.requestPointerLock();
+      shoot();
+    }
+    if (e.button === 2){ e.preventDefault(); throwPlayerGrenade(); }
+  });
+  document.addEventListener('mouseup', e => { if (e.button === 0) isMouseDown = false; });
+  document.addEventListener('contextmenu', e => { if (isGameActive) e.preventDefault(); });
+}
+function initMobileControls(){
+  if (!isMobile) return;
+  const jz = document.getElementById('joystickZone');
+  const base = document.getElementById('joystickBase');
+  const knob = document.getElementById('joystickKnob');
+  const lookZone = document.getElementById('mobileControls');
+  if (jz && base && knob){
+    jz.addEventListener('touchstart', e => {
+      const t = e.changedTouches[0];
+      joystickActive = true; joystickTouchId = t.identifier;
+      joystickStartX = t.clientX; joystickStartY = t.clientY;
+      base.style.display = 'block';
+      base.style.left = t.clientX + 'px';
+      base.style.top = t.clientY + 'px';
+    }, {passive:true});
+    jz.addEventListener('touchmove', e => {
+      for (const t of e.changedTouches){
+        if (t.identifier === joystickTouchId){
+          joystickDeltaX = t.clientX - joystickStartX;
+          joystickDeltaY = t.clientY - joystickStartY;
+          const max = 50, d = Math.hypot(joystickDeltaX, joystickDeltaY);
+          if (d > max){ joystickDeltaX = (joystickDeltaX/d)*max; joystickDeltaY = (joystickDeltaY/d)*max; }
+          knob.style.transform = `translate(calc(-50% + ${joystickDeltaX}px), calc(-50% + ${joystickDeltaY}px))`;
+        }
+      }
+    }, {passive:true});
+    jz.addEventListener('touchend', e => {
+      for (const t of e.changedTouches){
+        if (t.identifier === joystickTouchId){
+          joystickActive = false; joystickTouchId = null;
+          joystickDeltaX = 0; joystickDeltaY = 0;
+          base.style.display = 'none';
+          knob.style.transform = 'translate(-50%, -50%)';
+        }
+      }
+    }, {passive:true});
+  }
+  const bind = (id, action) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('touchstart', e => { e.preventDefault(); action(); el.classList.add('pressed'); }, {passive:false});
+    el.addEventListener('touchend', e => { e.preventDefault(); el.classList.remove('pressed'); }, {passive:false});
+  };
+  bind('btnShoot', () => shoot());
+  bind('btnReload', () => reload());
+  bind('btnJump', () => jump());
+  bind('btnMedkit', () => useMedkit());
+  bind('btnGrenade', () => throwPlayerGrenade());
+  bind('btnPickup', () => pickupLoot());
+  bind('btnWeapon', () => {
+    const list = PROGRESS.ownedWeapons;
+    const i = list.indexOf(currentWeapon);
+    switchWeapon(list[(i + 1) % list.length]);
+  });
+  if (lookZone){
+    lookZone.addEventListener('touchstart', e => {
+      for (const t of e.changedTouches){
+        if (t.clientX > window.innerWidth * 0.5 && !joystickActive){
+          lookTouchId = t.identifier;
+          lookLastX = t.clientX; lookLastY = t.clientY;
+        }
+      }
+    }, {passive:true});
+    lookZone.addEventListener('touchmove', e => {
+      for (const t of e.changedTouches){
+        if (t.identifier === lookTouchId){
+          yaw -= (t.clientX - lookLastX) * 0.005;
+          pitch -= (t.clientY - lookLastY) * 0.005;
+          pitch = clamp(pitch, -Math.PI/2 + 0.1, Math.PI/2 - 0.1);
+          lookLastX = t.clientX; lookLastY = t.clientY;
+          if (tutorialState && !tutorialState.looked) { tutorialState.looked = true; markTutStep('look'); }
+        }
+      }
+    }, {passive:true});
+    lookZone.addEventListener('touchend', e => {
+      for (const t of e.changedTouches){
+        if (t.identifier === lookTouchId) lookTouchId = null;
+      }
+    }, {passive:true});
+  }
+}
+window.addEventListener('resize', () => {
+  if (!camera) return;
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  if (composer) composer.setSize(innerWidth, innerHeight);
+});
+window.addEventListener('load', () => {
+  document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+  document.getElementById('menu').style.display = 'flex';
+  init();
+});

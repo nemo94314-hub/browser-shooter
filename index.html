@@ -82,7 +82,6 @@
     <ellipse cx="40" cy="28" rx="6" ry="8" fill="#0a0a0a"/>
     <polygon points="32,38 29,46 35,46" fill="#0a0a0a"/>
   </symbol>
-  <!-- НОВАЯ ИКОНКА: ГРАНАТА -->
   <symbol id="icon-grenade" viewBox="0 0 64 64">
     <ellipse cx="32" cy="38" rx="16" ry="20" fill="#2a5a2a" stroke="#000" stroke-width="2"/>
     <rect x="28" y="12" width="8" height="10" fill="#666" stroke="#000" stroke-width="1.5"/>
@@ -118,24 +117,20 @@
       <h2>МУЛЬТИПЛЕЕР</h2>
       <div class="coins-display"><svg class="ico-sm"><use href="#icon-coin"/></svg> <span id="mpCoins">0</span></div>
     </div>
-
     <div style="text-align:center;margin-bottom:20px;">
       <p style="color:#aaa;font-family:'Courier New',monospace;font-size:13px;letter-spacing:2px;">
         ИГРАЙ С ДРУЗЬЯМИ В ОДНОЙ КОМНАТЕ
       </p>
     </div>
-
     <div class="mp-section">
       <h3 style="color:#00d4ff;font-family:'Courier New',monospace;letter-spacing:3px;margin-bottom:15px;">СОЗДАТЬ КОМНАТУ</h3>
       <button id="createRoomBtn" class="btn-primary">СОЗДАТЬ НОВУЮ КОМНАТУ</button>
     </div>
-
     <div class="mp-section">
       <h3 style="color:#00d4ff;font-family:'Courier New',monospace;letter-spacing:3px;margin-bottom:15px;">ВОЙТИ В КОМНАТУ</h3>
       <input type="text" id="roomCodeInput" placeholder="КОД" maxlength="6" style="padding:12px;font-size:24px;text-align:center;letter-spacing:6px;text-transform:uppercase;background:#0a0a0a;color:#00d4ff;border:2px solid #00d4ff;border-radius:6px;width:220px;font-family:'Courier New',monospace;margin-bottom:15px;display:block;margin-left:auto;margin-right:auto;">
       <button id="joinRoomBtn" class="btn-primary">ВОЙТИ</button>
     </div>
-
     <div id="roomInfo" style="display:none;text-align:center;margin-top:20px;">
       <p style="color:#00d4ff;font-family:'Courier New',monospace;font-size:14px;margin-bottom:10px;">КОД КОМНАТЫ:</p>
       <p id="roomCodeDisplay" style="color:#ffcc00;font-size:42px;font-weight:900;letter-spacing:10px;font-family:'Courier New',monospace;margin:10px 0;">------</p>
@@ -155,7 +150,6 @@
       <h2>РЕЖИМ ВЫЖИВАНИЯ</h2>
       <div class="coins-display"><svg class="ico-sm"><use href="#icon-coin"/></svg> <span id="survivalCoins">0</span></div>
     </div>
-
     <div style="text-align:center;margin-bottom:20px;">
       <p style="color:#aaa;font-family:'Courier New',monospace;font-size:13px;letter-spacing:2px;margin-bottom:20px;">
         ВЫЖИВИ КАК МОЖНО ДОЛЬШЕ. ВРАГИ СТАНОВЯТСЯ СИЛЬНЕЕ КАЖДУЮ ВОЛНУ.
@@ -164,11 +158,9 @@
         🏆 РЕКОРД: <b id="survivalBest">0</b> волн
       </div>
     </div>
-
     <h3 style="color:#888;font-family:'Courier New',monospace;font-size:14px;letter-spacing:3px;margin-bottom:15px;text-align:center;">
       ВЫБЕРИ СЛОЖНОСТЬ
     </h3>
-
     <div class="survival-grid" id="survivalGrid"></div>
   </div>
 </div>
@@ -205,7 +197,6 @@
 <div id="settings" class="screen" style="display:none;">
   <div class="settings-box">
     <h2>НАСТРОЙКИ</h2>
-
     <div class="settings-block">
       <h3>ГРАФИКА И ЗВУК</h3>
       <label>Чувствительность <input type="range" id="sensSlider" min="1" max="20" value="5"></label>
@@ -219,7 +210,6 @@
       </label>
       <label>FOV <input type="range" id="fovSlider" min="60" max="100" value="75"></label>
     </div>
-
     <div class="settings-block">
       <h3>РЕЖИМ ИГРЫ</h3>
       <label class="toggle-label">
@@ -227,19 +217,16 @@
         <span>Хоррор-режим</span>
       </label>
     </div>
-
     <div class="settings-block">
       <h3>ПРОЧЕЕ</h3>
       <label class="toggle-label"><input type="checkbox" id="debugToggle"><span>Отладка</span></label>
       <button id="resetProgress" class="btn-danger">СБРОСИТЬ ПРОГРЕСС</button>
     </div>
-
     <div class="settings-block support-block">
       <h3>ПОДДЕРЖКА</h3>
       <a href="mailto:nemo94314@gmail.com?subject=ZOMBIESHOOT" class="btn-support">НАПИСАТЬ НА ПОЧТУ</a>
       <p class="support-email">nemo94314@gmail.com</p>
     </div>
-
     <button id="closeSettings" class="btn-primary">← НАЗАД</button>
   </div>
 </div>
@@ -250,7 +237,6 @@
   <div id="health">100</div>
   <div id="ammo"><svg class="ico-hud"><use href="#icon-rifle"/></svg> 30/30</div>
   <div id="medkits"><svg class="ico-hud"><use href="#icon-medkit"/></svg> x2</div>
-  <!-- НОВОЕ: СЧЁТЧИК ГРАНАТ -->
   <div id="grenades"><svg class="ico-hud"><use href="#icon-grenade"/></svg> x3</div>
   <div id="crosshair">+</div>
   <div id="interactPrompt">[F] Подобрать</div>
@@ -260,6 +246,8 @@
   </div>
   <div id="damageVignette"></div>
   <div id="hitMarker">✖</div>
+  <!-- НОВОЕ: ПАНЕЛЬ ТУТОРИАЛА -->
+  <div id="tutorialHUD" style="display:none;"></div>
 </div>
 
 <!-- МОБИЛЬНОЕ УПРАВЛЕНИЕ -->
@@ -271,7 +259,6 @@
     <button class="mob-btn reload" id="btnReload"><svg class="ico-btn"><use href="#icon-reload"/></svg></button>
     <button class="mob-btn jump" id="btnJump"><svg class="ico-btn"><use href="#icon-jump"/></svg></button>
     <button class="mob-btn pickup" id="btnPickup"><svg class="ico-btn"><use href="#icon-pickup"/></svg></button>
-    <!-- НОВОЕ: КНОПКА ГРАНАТЫ -->
     <button class="mob-btn grenade" id="btnGrenade"><svg class="ico-btn"><use href="#icon-grenade"/></svg></button>
     <button class="mob-btn shoot" id="btnShoot"><svg class="ico-btn"><use href="#icon-shoot"/></svg></button>
   </div>
@@ -397,38 +384,6 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(err => console.log('SW error:', err));
   });
 }
-
-// ============ ПОДКЛЮЧЕНИЕ КНОПКИ ГРАНАТЫ ============
-// Кнопка появляется в мобильном управлении. Также можно нажать ПКМ или G на клавиатуре.
-window.addEventListener('load', () => {
-  const btn = document.getElementById('btnGrenade');
-  if (btn) {
-    // Тач
-    btn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      if (typeof throwPlayerGrenade === 'function') throwPlayerGrenade();
-      btn.style.transform = 'scale(0.9)';
-      setTimeout(() => { btn.style.transform = ''; }, 100);
-    }, { passive: false });
-    // Клик (для десктопной отладки)
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (typeof throwPlayerGrenade === 'function') throwPlayerGrenade();
-      btn.style.transform = 'scale(0.9)';
-      setTimeout(() => { btn.style.transform = ''; }, 100);
-    });
-  }
-
-  // Обновление счётчика гранат в HUD
-  const updateGrenadeHUD = () => {
-    const el = document.getElementById('grenades');
-    if (!el) return;
-    const count = (typeof playerGrenades !== 'undefined') ? playerGrenades : 3;
-    el.innerHTML = '<svg class="ico-hud"><use href="#icon-grenade"/></svg> x' + count;
-  };
-  setInterval(updateGrenadeHUD, 250);
-  updateGrenadeHUD();
-});
 </script>
 </body>
 </html>

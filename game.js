@@ -481,7 +481,7 @@ function init(){
   renderer.domElement.style.inset = '0';
   renderer.domElement.style.zIndex = '20';
   document.body.appendChild(renderer.domElement);
-  renderer.domElement.style.display = 'none'; // спрячем пока меню открыто
+  renderer.domElement.style.display = 'none';
 
   try{
     const hm = localStorage.getItem('zombieshoot_horror');
@@ -801,7 +801,6 @@ function startGame(level = 1, survival = null){
   buildLevelEnvironment(level);
   createWeapon(currentWeapon);
 
-  // Показать HUD, спрятать меню
   document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
   document.getElementById('hud').style.display = 'block';
   renderer.domElement.style.display = 'block';
@@ -812,7 +811,12 @@ function startGame(level = 1, survival = null){
   startDynamicMusic();
   startWave();
 
-  if (isMobile) renderer.domElement.requestPointerLock?.();
+  // На ПК — сразу запросить pointer lock по клику
+  if (!isMobile){
+    setTimeout(() => {
+      if (renderer.domElement.requestPointerLock) renderer.domElement.requestPointerLock();
+    }, 100);
+  }
 }
 
 function startWave(){
@@ -868,6 +872,8 @@ function completeLevel(){
   saveProgress();
   updateCoinsDisplay();
 
+  if (document.pointerLockElement) document.exitPointerLock();
+
   setTimeout(() => {
     document.getElementById('hud').style.display = 'none';
     renderer.domElement.style.display = 'none';
@@ -887,6 +893,7 @@ function gameOver(){
   stopHorrorAmbient();
   stopDynamicMusic();
   showToast('Вы погибли...', 2000);
+  if (document.pointerLockElement) document.exitPointerLock();
   setTimeout(() => {
     document.getElementById('hud').style.display = 'none';
     renderer.domElement.style.display = 'none';
@@ -1552,41 +1559,43 @@ function handleSkin(key){
 window.handleWeapon = handleWeapon;
 window.handleSkin = handleSkin;
 
-// ---------- УПРАВЛЕНИЕ ----------
+// ---------- УПРАВЛЕНИЕ (РАБОТАЕТ НА ЛЮБОЙ РАСКЛАДКЕ) ----------
 function setupControls(){
   document.addEventListener('keydown', e => {
-    const k = e.key.toLowerCase();
-    if (k === 'w') keys.w = true;
-    if (k === 'a') keys.a = true;
-    if (k === 's') keys.s = true;
-    if (k === 'd') keys.d = true;
-    if (k === 'r') reload();
-    if (k === 'e') pickupLoot();
-    if (k === 'q') useMedkit();
-    if (k === 'g') throwPlayerGrenade();
-    if (k === '1') switchWeapon('pistol');
-    if (k === '2') switchWeapon('rifle');
-    if (k === '3') switchWeapon('shotgun');
-    if (k === '4') switchWeapon('sniper');
-    if (k === '5') switchWeapon('dualPistols');
-    if (k === '6') switchWeapon('flamethrower');
-    if (k === 'f'){ if (flashlight) flashlight.visible = !flashlight.visible; }
-    if (k === 'escape'){
+    const k = e.code;
+    if (k === 'KeyW') keys.w = true;
+    if (k === 'KeyA') keys.a = true;
+    if (k === 'KeyS') keys.s = true;
+    if (k === 'KeyD') keys.d = true;
+    if (k === 'KeyR') reload();
+    if (k === 'KeyE') pickupLoot();
+    if (k === 'KeyQ') useMedkit();
+    if (k === 'KeyG') throwPlayerGrenade();
+    if (k === 'KeyF'){ if (flashlight) flashlight.visible = !flashlight.visible; }
+    if (k === 'Digit1') switchWeapon('pistol');
+    if (k === 'Digit2') switchWeapon('rifle');
+    if (k === 'Digit3') switchWeapon('shotgun');
+    if (k === 'Digit4') switchWeapon('sniper');
+    if (k === 'Digit5') switchWeapon('dualPistols');
+    if (k === 'Digit6') switchWeapon('flamethrower');
+    if (k === 'Escape'){
       if (isGameActive){
         isGameActive = false;
         stopHorrorAmbient(); stopDynamicMusic();
         document.getElementById('hud').style.display = 'none';
         document.getElementById('menu').style.display = 'flex';
+        renderer.domElement.style.display = 'none';
+        if (document.pointerLockElement) document.exitPointerLock();
       }
     }
-    if (k === ' '){ e.preventDefault(); jump(); }
+    if (k === 'Space'){ e.preventDefault(); jump(); }
   });
   document.addEventListener('keyup', e => {
-    const k = e.key.toLowerCase();
-    if (k === 'w') keys.w = false;
-    if (k === 'a') keys.a = false;
-    if (k === 's') keys.s = false;
-    if (k === 'd') keys.d = false;
+    const k = e.code;
+    if (k === 'KeyW') keys.w = false;
+    if (k === 'KeyA') keys.a = false;
+    if (k === 'KeyS') keys.s = false;
+    if (k === 'KeyD') keys.d = false;
   });
   document.addEventListener('mousemove', e => {
     if (!isGameActive) return;
@@ -1648,8 +1657,7 @@ function initMobileControls(){
     }, {passive:true});
   }
 
-  // Кнопки
-  const bind = (id, action, hold = false) => {
+  const bind = (id, action) => {
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('touchstart', e => { e.preventDefault(); action(); el.classList.add('pressed'); }, {passive:false});
@@ -1667,7 +1675,6 @@ function initMobileControls(){
     switchWeapon(list[(i + 1) % list.length]);
   });
 
-  // Обзор правой частью
   if (lookZone){
     lookZone.addEventListener('touchstart', e => {
       for (const t of e.changedTouches){
@@ -1706,7 +1713,6 @@ window.addEventListener('resize', () => {
 
 // ---------- СТАРТ ----------
 window.addEventListener('load', () => {
-  // Показать только главное меню
   document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
   document.getElementById('menu').style.display = 'flex';
   init();

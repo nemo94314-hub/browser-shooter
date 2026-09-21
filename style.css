@@ -218,3 +218,89 @@ html, body { overflow: hidden; background: #000; color: #fff; touch-action: none
   #joystickBase { width: 120px; height: 120px; }
   #joystickKnob { width: 55px; height: 55px; }
 }
+/* ЕЖЕДНЕВНАЯ НАГРАДА */
+.daily-box {
+  max-width: 600px;
+  width: 100%;
+  background: linear-gradient(135deg, #1a1200, #0a0800);
+  border: 3px solid #ffcc00;
+  border-radius: 15px;
+  padding: 30px;
+  box-shadow: 0 0 80px rgba(255,204,0,0.6);
+  text-align: center;
+  position: relative;
+  z-index: 101;
+}
+.daily-box h2 {
+  font-size: 26px;
+  color: #ffcc00;
+  letter-spacing: 4px;
+  margin-bottom: 15px;
+  text-shadow: 0 0 20px rgba(255,204,0,0.9);
+}
+.daily-streak {
+  font-size: 18px;
+  color: #ff6600;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 2px;
+  margin-bottom: 25px;
+}
+.daily-streak b { color: #ffcc00; font-size: 22px; }
+.daily-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 25px;
+}
+.daily-day {
+  background: #1a1a1a;
+  border: 2px solid #444;
+  border-radius: 8px;
+  padding: 12px 6px;
+  position: relative;
+  transition: 0.3s;
+}
+.daily-day.claimed {
+  background: linear-gradient(135deg, #2a1e00, #3a2a00);
+  border-color: #ffcc00;
+  box-shadow: 0 0 15px rgba(255,204,0,0.5);
+}
+.daily-day.today {
+  border-color: #ffcc00;
+  animation: dailyPulse 1.5s infinite;
+}
+@keyframes dailyPulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(255,204,0,0.5); }
+  50% { box-shadow: 0 0 25px rgba(255,204,0,1); }
+}
+.daily-day .day-num {
+  font-size: 12px;
+  color: #888;
+  font-family: 'Courier New', monospace;
+  margin-bottom: 4px;
+}
+.daily-day.claimed .day-num { color: #ffcc00; }
+.daily-day .day-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+.daily-day .day-reward {
+  font-size: 13px;
+  color: #ffcc00;
+  font-weight: 900;
+  font-family: 'Courier New', monospace;
+}
+.daily-day.claimed .day-icon::after {
+  content: '✓';
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  color: #00ff00;
+  font-size: 16px;
+  text-shadow: 0 0 8px #00ff00;
+}
+@media (max-width: 500px) {
+  .daily-grid { grid-template-columns: repeat(2, 1fr); }
+  .daily-box { padding: 20px; }
+  .daily-box h2 { font-size: 20px; }
+}

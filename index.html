@@ -16,24 +16,25 @@
 <canvas id="bgCanvas"></canvas>
 
 <svg style="display:none;">
-  <symbol id="icon-pistol" viewBox="0 0 64 64"><path d="M8 28 L8 24 L40 24 L40 20 L44 20 L44 24 L52 24 L52 28 L44 28 L44 32 L40 32 L40 28 L30 28 L30 40 L26 40 L26 28 Z" fill="currentColor" stroke="#000" stroke-width="1"/><rect x="26" y="32" width="8" height="14" rx="1" fill="#222"/></symbol>
-  <symbol id="icon-rifle" viewBox="0 0 64 64"><path d="M4 30 L4 26 L48 26 L48 22 L52 22 L52 26 L58 26 L58 30 L52 30 L52 34 L48 34 L48 30 L30 30 L30 44 L26 44 L26 30 Z" fill="currentColor" stroke="#000" stroke-width="1"/><rect x="26" y="34" width="8" height="16" rx="1" fill="#222"/></symbol>
+  <symbol id="icon-pistol" viewBox="0 0 64 64"><path d="M8 28 L8 24 L40 24 L40 20 L44 20 L44 24 L52 24 L52 28 L44 28 L44 32 L40 32 L40 28 L30 28 L30 40 L26 40 L26 28 Z" fill="currentColor" stroke="#000" stroke-width="1"/></symbol>
+  <symbol id="icon-rifle" viewBox="0 0 64 64"><path d="M4 30 L4 26 L48 26 L48 22 L52 22 L52 26 L58 26 L58 30 L52 30 L52 34 L48 34 L48 30 L30 30 L30 44 L26 44 L26 30 Z" fill="currentColor" stroke="#000" stroke-width="1"/></symbol>
   <symbol id="icon-shotgun" viewBox="0 0 64 64"><path d="M4 28 L4 24 L52 24 L52 20 L58 20 L58 32 L52 32 L52 28 L30 28 L30 42 L26 42 L26 28 Z" fill="currentColor" stroke="#000" stroke-width="1"/></symbol>
-  <symbol id="icon-sniper" viewBox="0 0 64 64"><path d="M2 30 L2 26 L52 26 L52 22 L58 22 L58 34 L52 34 L52 30 L28 30 L28 44 L24 44 L24 30 Z" fill="currentColor" stroke="#000" stroke-width="1"/><rect x="14" y="18" width="24" height="6" rx="2" fill="#1a1a1a"/></symbol>
-  <symbol id="icon-dual" viewBox="0 0 64 64"><path d="M6 26 L6 22 L26 22 L26 18 L30 18 L30 22 L34 22 L34 26 L30 26 L30 30 L26 30 L26 26 L16 26 L16 38 L12 38 L12 26 Z" fill="currentColor" stroke="#000" stroke-width="1"/></symbol>
-  <symbol id="icon-flame" viewBox="0 0 64 64"><rect x="4" y="26" width="40" height="10" fill="#cc6600" stroke="#000" stroke-width="1"/><rect x="42" y="22" width="16" height="18" fill="#888"/></symbol>
-  <symbol id="icon-medkit" viewBox="0 0 64 64"><rect x="8" y="20" width="48" height="32" rx="4" fill="#f0f0f0" stroke="#000" stroke-width="2"/><rect x="28" y="26" width="8" height="20" fill="#ff0000"/><rect x="18" y="32" width="28" height="8" fill="#ff0000"/></symbol>
-  <symbol id="icon-reload" viewBox="0 0 64 64"><path d="M32 8 A24 24 0 1 0 56 32" fill="none" stroke="#00d4ff" stroke-width="5" stroke-linecap="round"/><polygon points="52,8 60,20 44,20" fill="#00d4ff"/></symbol>
+  <symbol id="icon-sniper" viewBox="0 0 64 64"><path d="M2 30 L2 26 L52 26 L52 22 L58 22 L58 34 L52 34 L52 30 L28 30 L28 44 L24 44 L24 30 Z" fill="currentColor" stroke="#000" stroke-width="1"/></symbol>
+  <symbol id="icon-dual" viewBox="0 0 64 64"><path d="M6 26 L6 22 L26 22 L26 18 L30 18 L30 22 L34 22 L34 26 L30 26 L30 30 L26 30 L26 26 L16 26 L16 38 L12 38 L12 26 Z" fill="currentColor"/></symbol>
+  <symbol id="icon-flame" viewBox="0 0 64 64"><rect x="4" y="26" width="40" height="10" fill="#cc6600"/><rect x="42" y="22" width="16" height="18" fill="#888"/></symbol>
+  <symbol id="icon-medkit" viewBox="0 0 64 64"><rect x="8" y="20" width="48" height="32" rx="4" fill="#f0f0f0"/><rect x="28" y="26" width="8" height="20" fill="#ff0000"/><rect x="18" y="32" width="28" height="8" fill="#ff0000"/></symbol>
+  <symbol id="icon-reload" viewBox="0 0 64 64"><path d="M32 8 A24 24 0 1 0 56 32" fill="none" stroke="#00d4ff" stroke-width="5"/><polygon points="52,8 60,20 44,20" fill="#00d4ff"/></symbol>
   <symbol id="icon-jump" viewBox="0 0 64 64"><path d="M32 8 L44 24 L36 24 L36 44 L28 44 L28 24 L20 24 Z" fill="#00aaff"/></symbol>
   <symbol id="icon-pickup" viewBox="0 0 64 64"><path d="M20 30 L20 18 L26 18 L26 22 L30 22 L30 12 L36 12 L36 22 L40 22 L40 18 L46 18 L46 30 L42 30 L42 46 L24 46 L24 30 Z" fill="#ffdd00"/></symbol>
   <symbol id="icon-shoot" viewBox="0 0 64 64"><circle cx="32" cy="32" r="22" fill="#ff0033"/><circle cx="32" cy="32" r="14" fill="#8a0000"/><circle cx="32" cy="32" r="6" fill="#fff"/></symbol>
   <symbol id="icon-weapon-switch" viewBox="0 0 64 64"><path d="M12 30 L12 26 L44 26 L44 22 L48 22 L48 26 L56 26 L56 30 L48 30 L48 34 L44 34 L44 30 L28 30 L28 42 L24 42 L24 30 Z" fill="#ffaa00"/></symbol>
   <symbol id="icon-star" viewBox="0 0 64 64"><polygon points="32,6 40,24 60,26 45,40 50,58 32,48 14,58 19,40 4,26 24,24" fill="#ffcc00" stroke="#8a6500" stroke-width="2"/></symbol>
   <symbol id="icon-coin" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="#ffcc00" stroke="#8a6500" stroke-width="3"/><text x="32" y="42" text-anchor="middle" font-size="24" font-weight="900" fill="#8a6500" font-family="Arial">$</text></symbol>
-  <symbol id="icon-skull" viewBox="0 0 64 64"><ellipse cx="32" cy="28" rx="20" ry="24" fill="#e8e8e0" stroke="#000" stroke-width="2"/><ellipse cx="24" cy="28" rx="6" ry="8" fill="#0a0a0a"/><ellipse cx="40" cy="28" rx="6" ry="8" fill="#0a0a0a"/><polygon points="32,38 29,46 35,46" fill="#0a0a0a"/></symbol>
-  <symbol id="icon-grenade" viewBox="0 0 64 64"><ellipse cx="32" cy="38" rx="16" ry="20" fill="#2a5a2a" stroke="#000" stroke-width="2"/><rect x="28" y="12" width="8" height="10" fill="#666"/><path d="M32 12 Q42 4 50 10" stroke="#cc8800" stroke-width="2.5" fill="none"/><circle cx="50" cy="10" r="3" fill="#cc8800"/></symbol>
-  <symbol id="icon-trophy" viewBox="0 0 64 64"><path d="M18 10 L18 26 Q18 38 32 38 Q46 38 46 26 L46 10 Z" fill="#ffcc00" stroke="#8a6500" stroke-width="2"/><rect x="28" y="38" width="8" height="10" fill="#8a6500"/><rect x="20" y="48" width="24" height="6" fill="#8a6500"/><path d="M18 14 Q8 14 8 24 Q8 30 16 30" fill="none" stroke="#8a6500" stroke-width="3"/><path d="M46 14 Q56 14 56 24 Q56 30 48 30" fill="none" stroke="#8a6500" stroke-width="3"/></symbol>
-  <symbol id="icon-ach" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="#ffaa00" stroke="#8a5500" stroke-width="3"/><polygon points="32,14 37,26 50,27 40,36 43,50 32,43 21,50 24,36 14,27 27,26" fill="#fff" stroke="#8a5500" stroke-width="1"/></symbol>
+  <symbol id="icon-skull" viewBox="0 0 64 64"><ellipse cx="32" cy="28" rx="20" ry="24" fill="#e8e8e0"/><ellipse cx="24" cy="28" rx="6" ry="8" fill="#0a0a0a"/><ellipse cx="40" cy="28" rx="6" ry="8" fill="#0a0a0a"/></symbol>
+  <symbol id="icon-grenade" viewBox="0 0 64 64"><ellipse cx="32" cy="38" rx="16" ry="20" fill="#2a5a2a"/><rect x="28" y="12" width="8" height="10" fill="#666"/><path d="M32 12 Q42 4 50 10" stroke="#cc8800" stroke-width="2.5" fill="none"/><circle cx="50" cy="10" r="3" fill="#cc8800"/></symbol>
+  <symbol id="icon-trophy" viewBox="0 0 64 64"><path d="M18 10 L18 26 Q18 38 32 38 Q46 38 46 26 L46 10 Z" fill="#ffcc00"/><rect x="28" y="38" width="8" height="10" fill="#8a6500"/><rect x="20" y="48" width="24" height="6" fill="#8a6500"/></symbol>
+  <symbol id="icon-ach" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="#ffaa00"/><polygon points="32,14 37,26 50,27 40,36 43,50 32,43 21,50 24,36 14,27 27,26" fill="#fff"/></symbol>
+  <symbol id="icon-gift" viewBox="0 0 64 64"><rect x="8" y="20" width="48" height="36" fill="#cc2244"/><rect x="4" y="14" width="56" height="10" fill="#ff3366"/><rect x="28" y="14" width="8" height="42" fill="#ffcc00"/><path d="M32 14 Q20 4 14 12 Q18 20 32 14 Z" fill="#ffcc00"/><path d="M32 14 Q44 4 50 12 Q46 20 32 14 Z" fill="#ffcc00"/></symbol>
 </svg>
 
 <!-- ГЛАВНОЕ МЕНЮ -->
@@ -42,15 +43,27 @@
     <img src="skull.png" class="skull-img" alt="ZOMBIESHOOT">
     <h1 class="game-title">ZOMBIE<span class="red">SHOOT</span></h1>
     <p class="tagline">ВЫЖИВИ В ЗОНЕ ЗАРАЖЕНИЯ</p>
-    <div class="version">v15.0 · MULTIPLAYER</div>
+    <div class="version">v15.2 · MULTIPLAYER</div>
     <div class="coins-display"><svg class="ico-sm"><use href="#icon-coin"/></svg> <span id="menuCoins">0</span></div>
     <button id="playBtn" class="btn-primary">ИГРАТЬ</button>
+    <button id="dailyBtn" class="btn-primary" style="background:linear-gradient(135deg,#8a5500,#ffcc00);border-color:#ffcc00;color:#000;">🎁 ЕЖЕДНЕВНАЯ НАГРАДА</button>
     <button id="survivalBtn" class="btn-primary" style="background:linear-gradient(135deg,#4a0000,#8a0000);border-color:#8a0000;">ВЫЖИВАНИЕ</button>
     <button id="multiplayerBtn" class="btn-primary" style="background:linear-gradient(135deg,#004a8a,#0088ff);border-color:#0088ff;">МУЛЬТИПЛЕЕР</button>
     <button id="shopBtn" class="btn-secondary"><svg class="ico-sm"><use href="#icon-weapon-switch"/></svg> МАГАЗИН</button>
-    <button id="achBtn" class="btn-secondary"><svg class="ico-sm"><use href="#icon-ach"/></svg> ДОСТИЖЕНИЯ <span id="achProgress" style="color:#ffcc00;font-weight:900;">0/25</span></button>
+    <button id="achBtn" class="btn-secondary"><svg class="ico-sm"><use href="#icon-ach"/></svg> ДОСТИЖЕНИЯ <span id="achProgress" style="color:#ffcc00;font-weight:900;">0/30</span></button>
     <button id="recordsBtn" class="btn-secondary"><svg class="ico-sm"><use href="#icon-trophy"/></svg> РЕКОРДЫ</button>
     <button id="settingsBtn" class="btn-secondary">НАСТРОЙКИ</button>
+  </div>
+</div>
+
+<!-- ЕЖЕДНЕВНАЯ НАГРАДА -->
+<div id="dailyModal" class="screen" style="display:none;">
+  <div class="daily-box">
+    <h2>🎁 ЕЖЕДНЕВНАЯ НАГРАДА</h2>
+    <p class="daily-streak">🔥 Стрик: <b id="dailyStreak">0</b> дней</p>
+    <div id="dailyGrid" class="daily-grid"></div>
+    <button id="dailyClaimBtn" class="btn-primary" style="background:linear-gradient(135deg,#8a5500,#ffcc00);border-color:#ffcc00;color:#000;">ЗАБРАТЬ</button>
+    <button id="dailyCloseBtn" class="btn-secondary">ЗАКРЫТЬ</button>
   </div>
 </div>
 
@@ -60,7 +73,7 @@
     <div class="top-bar">
       <button id="backFromAch" class="btn-back">←</button>
       <h2>🏆 ДОСТИЖЕНИЯ</h2>
-      <div class="coins-display" style="color:#ffcc00;"><span id="achCount">0/25</span></div>
+      <div class="coins-display" style="color:#ffcc00;"><span id="achCount">0/30</span></div>
     </div>
     <div id="achGrid" class="ach-grid"></div>
   </div>
@@ -82,16 +95,13 @@
   </div>
 </div>
 
-<!-- ЭКРАН МУЛЬТИПЛЕЕРА -->
+<!-- МУЛЬТИПЛЕЕР -->
 <div id="multiplayerMenu" class="screen" style="display:none;">
   <div class="wide-box">
     <div class="top-bar">
       <button id="backFromMultiplayer" class="btn-back">←</button>
       <h2>МУЛЬТИПЛЕЕР</h2>
       <div class="coins-display"><svg class="ico-sm"><use href="#icon-coin"/></svg> <span id="mpCoins">0</span></div>
-    </div>
-    <div style="text-align:center;margin-bottom:20px;">
-      <p style="color:#aaa;font-family:'Courier New',monospace;font-size:13px;letter-spacing:2px;">ИГРАЙ С ДРУЗЬЯМИ В ОДНОЙ КОМНАТЕ</p>
     </div>
     <div class="mp-section">
       <h3 style="color:#00d4ff;font-family:'Courier New',monospace;letter-spacing:3px;margin-bottom:15px;">СОЗДАТЬ КОМНАТУ</h3>
@@ -105,15 +115,14 @@
     <div id="roomInfo" style="display:none;text-align:center;margin-top:20px;">
       <p style="color:#00d4ff;font-family:'Courier New',monospace;font-size:14px;margin-bottom:10px;">КОД КОМНАТЫ:</p>
       <p id="roomCodeDisplay" style="color:#ffcc00;font-size:42px;font-weight:900;letter-spacing:10px;font-family:'Courier New',monospace;margin:10px 0;">------</p>
-      <p style="color:#888;font-size:12px;margin:10px 0;">Отправь этот код другу</p>
-      <p style="color:#aaa;font-size:13px;">Игроков в комнате: <b id="playerCount" style="color:#00d4ff;">1</b></p>
+      <p style="color:#aaa;font-size:13px;">Игроков: <b id="playerCount" style="color:#00d4ff;">1</b></p>
       <button id="startMPBtn" class="btn-primary" style="margin-top:15px;">НАЧАТЬ ИГРУ</button>
-      <button id="leaveRoomBtn" class="btn-secondary" style="margin-top:10px;">ВЫЙТИ ИЗ КОМНАТЫ</button>
+      <button id="leaveRoomBtn" class="btn-secondary" style="margin-top:10px;">ВЫЙТИ</button>
     </div>
   </div>
 </div>
 
-<!-- ЭКРАН РЕЖИМА ВЫЖИВАНИЯ -->
+<!-- РЕЖИМ ВЫЖИВАНИЯ -->
 <div id="survivalMenu" class="screen" style="display:none;">
   <div class="wide-box">
     <div class="top-bar">
@@ -130,7 +139,7 @@
   </div>
 </div>
 
-<!-- КАРТА УРОВНЕЙ -->
+<!-- КАРТА -->
 <div id="map" class="screen" style="display:none;">
   <div class="wide-box">
     <div class="top-bar">
@@ -167,6 +176,11 @@
       <label>Чувствительность <input type="range" id="sensSlider" min="1" max="20" value="5"></label>
       <label>Громкость <input type="range" id="volSlider" min="0" max="100" value="40"></label>
       <label>FOV <input type="range" id="fovSlider" min="60" max="100" value="75"></label>
+    </div>
+    <div class="settings-block">
+      <h3>ЭФФЕКТЫ</h3>
+      <label class="toggle-label"><input type="checkbox" id="bloomToggle" checked><span>Bloom (свечение)</span></label>
+      <label class="toggle-label"><input type="checkbox" id="ssaoToggle"><span>SSAO (тени в углах)</span></label>
     </div>
     <div class="settings-block">
       <h3>РЕЖИМ ИГРЫ</h3>
@@ -244,16 +258,22 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<!-- Post-processing -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/SSAOPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/FilmShader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/VignetteShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/SSAOShader.js"></script>
 
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
-
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyCBvDWQ-VnO0GhWpgbc3YlJmj-ARz4rG8c",
@@ -298,7 +318,6 @@ function drawBG(){
   requestAnimationFrame(drawBG);
 }
 drawBG();
-
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch(()=>{});

@@ -12,7 +12,16 @@ const DEFAULT_PROGRESS = {
   ownedSkins: ['default'],
   ownedWeapons: ['pistol','rifle','shotgun'],
   currentSkin: 'default',
-  upgrades: { damage:0, reload:0, health:0 }
+  upgrades: { damage:0, reload:0, health:0 },
+  achievements: {},
+  records: {
+    bestScore: 0,
+    survivalBest: { easy:0, normal:0, hard:0, nightmare:0 },
+    totalKills: 0,
+    totalHeadshots: 0,
+    totalDeaths: 0,
+    gamesPlayed: 0
+  }
 };
 let PROGRESS = loadProgress();
 function loadProgress() {
@@ -26,6 +35,9 @@ function loadProgress() {
       if (!merged.ownedWeapons) merged.ownedWeapons = ['pistol','rifle','shotgun'];
       if (!merged.ownedSkins) merged.ownedSkins = ['default'];
       if (!merged.levels[0]) merged.levels[0] = {unlocked:true, completed:false, stars:0};
+      if (!merged.achievements) merged.achievements = {};
+      if (!merged.records) merged.records = JSON.parse(JSON.stringify(DEFAULT_PROGRESS.records));
+      if (!merged.records.survivalBest) merged.records.survivalBest = {easy:0,normal:0,hard:0,nightmare:0};
       return merged;
     }
   } catch(e){}
@@ -34,9 +46,10 @@ function loadProgress() {
 function saveProgress(){ try{ localStorage.setItem('zombieshoot_progress_v15', JSON.stringify(PROGRESS)); }catch(e){} }
 function resetProgress(){
   PROGRESS = JSON.parse(JSON.stringify(DEFAULT_PROGRESS));
-  saveProgress(); updateCoinsDisplay(); renderLevelGrid();
+  saveProgress(); updateCoinsDisplay(); renderLevelGrid(); updateAchCount();
 }
 
+// ============ УРОВНИ ============
 const LEVELS = {
   0:{name:'Тренировка',icon:'🎓',waves:1,boss:false,maxEnemies:3,enemySpeed:0.8,enemyHealth:50,enemyDamage:0,shooterChance:0,grenadierChance:0,theme:'grass',sky:0x87a5c4,fog:0x87a5c4,fogNear:50,fogFar:130,ambient:0.9,isTutorial:true,daylight:true},
   1:{name:'Лагерь',icon:'⛺',waves:1,boss:false,maxEnemies:5,enemySpeed:1.2,enemyHealth:30,enemyDamage:0.5,shooterChance:0.3,grenadierChance:0.05,theme:'grass',sky:0x0a0a1a,fog:0x050510,fogNear:8,fogFar:40,ambient:0.08},
@@ -72,14 +85,222 @@ const SKINS = {
   ghost:    {name:'Призрак',   body:0x666666,head:0x999999,cost:1000}
 };
 
+// ============ ДОСТИЖЕНИЯ ============
+const ACHIEVEMENTS = {
+  firstBlood:  {icon:'🩸', name:'Первая кровь',     desc:'Убей первого зомби'},
+  shooter:     {icon:'🔫', name:'Стрелок',          desc:'Убей 10 зомби'},
+  butcher:     {icon:'💀', name:'Мясник',           desc:'Убей 100 зомби'},
+  genocide:    {icon:'☠️', name:'Геноцид',          desc:'Убей 500 зомби'},
+  sniper10:    {icon:'🎯', name:'Снайпер',          desc:'10 хедшотов'},
+  sniper100:   {icon:'🎯', name:'Снайпер-про',      desc:'100 хедшотов'},
+  grenadier:   {icon:'💥', name:'Гранатомётчик',    desc:'Убей 5 зомби одной гранатой'},
+  bossKill:    {icon:'👹', name:'Босс-слейер',      desc:'Убей первого босса'},
+  bossAll:     {icon:'👑', name:'Покоритель',       desc:'Пройди 8 уровень'},
+  trained:     {icon:'🎓', name:'Обучен',           desc:'Пройди тренировку'},
+  threeStars:  {icon:'⭐', name:'Три звезды',       desc:'Получи 3 звезды на уровне'},
+  perfection:  {icon:'🌟', name:'Перфекционист',    desc:'3 звезды на 5 уровнях'},
+  legend:      {icon:'🏆', name:'Легенда',          desc:'3 звезды на всех уровнях'},
+  healer:      {icon:'🩹', name:'Целитель',         desc:'Используй 10 аптечек'},
+  invincible:  {icon:'🛡️', name:'Неуязвимый',      desc:'Пройди уровень без урона'},
+  collector:   {icon:'🔫', name:'Коллекционер',     desc:'Купи всё оружие'},
+  stylish:     {icon:'👤', name:'Стильный',         desc:'Купи все скины'},
+  upgraded:    {icon:'⬆️', name:'Прокачан',         desc:'Прокачай все апгрейды'},
+  rich:        {icon:'💰', name:'Богач',            desc:'Накопи 5000 монет'},
+  wave10:      {icon:'🌊', name:'Волна 10',         desc:'Дойди до 10 волны'},
+  wave20:      {icon:'🌊', name:'Волна 20',         desc:'Дойди до 20 волны'},
+  wave30:      {icon:'🌊', name:'Волна 30',         desc:'Дойди до 30 волны'},
+  firestarter: {icon:'🔥', name:'Огнемётчик',       desc:'Убей 20 огнемётом'},
+  streak:      {icon:'⚡', name:'Серия хедшотов',   desc:'5 хедшотов подряд'},
+  hardcore:    {icon:'💀', name:'Хардкор',          desc:'Пройди Кошмар'}
+};
+
+let sessionStats = {
+  kills: 0, headshots: 0, headshotStreak: 0, maxStreak: 0,
+  grenadeKills: 0, flameKills: 0, medkitsUsed: 0, damageTaken: 0
+};
+
+function hasAch(id){ return !!PROGRESS.achievements[id]; }
+function unlockAch(id){
+  if (hasAch(id)) return;
+  if (!ACHIEVEMENTS[id]) return;
+  PROGRESS.achievements[id] = Date.now();
+  saveProgress();
+  showAchToast(ACHIEVEMENTS[id]);
+  updateAchCount();
+}
+function showAchToast(ach){
+  let el = document.getElementById('achToast');
+  if (!el){
+    el = document.createElement('div');
+    el.id = 'achToast';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `
+    <div class="toast-icon">${ach.icon}</div>
+    <div class="toast-content">
+      <div class="toast-label">🏆 ДОСТИЖЕНИЕ</div>
+      <div class="toast-name">${ach.name}</div>
+      <div class="toast-desc">${ach.desc}</div>
+    </div>
+  `;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 4000);
+}
+function updateAchCount(){
+  const n = Object.keys(PROGRESS.achievements || {}).length;
+  const total = Object.keys(ACHIEVEMENTS).length;
+  const a = document.getElementById('achProgress');
+  const b = document.getElementById('achCount');
+  if (a) a.textContent = `${n}/${total}`;
+  if (b) b.textContent = `${n}/${total}`;
+}
+function renderAchievements(){
+  const grid = document.getElementById('achGrid');
+  if (!grid) return;
+  let html = '';
+  for (const id in ACHIEVEMENTS){
+    const a = ACHIEVEMENTS[id];
+    const un = hasAch(id);
+    html += `
+      <div class="ach-card ${un ? 'unlocked' : 'locked'}">
+        <div class="ach-icon">${a.icon}</div>
+        <div class="ach-info">
+          <div class="ach-name">${a.name}</div>
+          <div class="ach-desc">${a.desc}</div>
+        </div>
+        ${!un ? '<div class="ach-lock">🔒</div>' : ''}
+      </div>`;
+  }
+  grid.innerHTML = html;
+  updateAchCount();
+}
+function checkAchConditions(){
+  const r = PROGRESS.records;
+  if (r.totalKills >= 1) unlockAch('firstBlood');
+  if (r.totalKills >= 10) unlockAch('shooter');
+  if (r.totalKills >= 100) unlockAch('butcher');
+  if (r.totalKills >= 500) unlockAch('genocide');
+  if (r.totalHeadshots >= 10) unlockAch('sniper10');
+  if (r.totalHeadshots >= 100) unlockAch('sniper100');
+  if (sessionStats.maxStreak >= 5) unlockAch('streak');
+  if (sessionStats.flameKills >= 20) unlockAch('firestarter');
+  if (PROGRESS.coins >= 5000) unlockAch('rich');
+  if (PROGRESS.ownedWeapons.length >= Object.keys(WEAPONS).length) unlockAch('collector');
+  if (PROGRESS.ownedSkins.length >= Object.keys(SKINS).length) unlockAch('stylish');
+  if (Object.values(PROGRESS.upgrades).every(v => v >= 5)) unlockAch('upgraded');
+  let threeStarCount = 0;
+  for (let i = 0; i <= 8; i++){ if ((PROGRESS.levels[i]?.stars || 0) >= 3) threeStarCount++; }
+  if (threeStarCount >= 1) unlockAch('threeStars');
+  if (threeStarCount >= 5) unlockAch('perfection');
+  if (threeStarCount >= 9) unlockAch('legend');
+}
+
+// ============ РЕКОРДЫ ============
+function getPlayerName(){
+  let n = localStorage.getItem('zombieshoot_name');
+  if (!n){
+    n = 'Игрок' + Math.floor(Math.random()*9000 + 1000);
+    localStorage.setItem('zombieshoot_name', n);
+  }
+  return n;
+}
+function updateBestScore(newScore){
+  if (newScore > (PROGRESS.records.bestScore || 0)){
+    PROGRESS.records.bestScore = newScore;
+    saveProgress();
+  }
+}
+function updateSurvivalRecord(mode, wave){
+  if (!PROGRESS.records.survivalBest[mode] || wave > PROGRESS.records.survivalBest[mode]){
+    PROGRESS.records.survivalBest[mode] = wave;
+    saveProgress();
+  }
+  const best = Math.max(...Object.values(PROGRESS.records.survivalBest), 0);
+  const el = document.getElementById('survivalBest');
+  if (el) el.textContent = best;
+}
+function submitToLeaderboard(){
+  if (!window.firebaseDB) return;
+  const name = getPlayerName();
+  const ref = firebaseDB.ref('leaderboard/survival').push();
+  ref.set({
+    name,
+    score: score,
+    wave,
+    mode: survivalMode ? survivalMode.name : 'Кампания',
+    level: currentLevel,
+    time: Date.now()
+  }).catch(err => console.warn('LB submit failed:', err));
+}
+function fetchLeaderboard(callback){
+  if (!window.firebaseDB){ callback([]); return; }
+  firebaseDB.ref('leaderboard/survival').orderByChild('score').limitToLast(20).once('value')
+    .then(snap => {
+      const arr = [];
+      snap.forEach(ch => { arr.push(ch.val()); });
+      arr.reverse();
+      callback(arr);
+    })
+    .catch(err => { console.warn('LB fetch failed:', err); callback([]); });
+}
+function renderRecords(tab = 'personal'){
+  const body = document.getElementById('recordsBody');
+  if (!body) return;
+  if (tab === 'personal'){
+    const r = PROGRESS.records;
+    const name = getPlayerName();
+    const rows = [
+      {label:'Лучший счёт',       value: r.bestScore || 0,   extra:'очков'},
+      {label:'Лёгкий',            value: r.survivalBest.easy      || 0, extra:'волн'},
+      {label:'Обычный',           value: r.survivalBest.normal    || 0, extra:'волн'},
+      {label:'Сложный',           value: r.survivalBest.hard      || 0, extra:'волн'},
+      {label:'Кошмар',            value: r.survivalBest.nightmare || 0, extra:'волн'},
+      {label:'Всего убийств',     value: r.totalKills || 0,   extra:'зомби'},
+      {label:'Всего хедшотов',    value: r.totalHeadshots || 0, extra:'попаданий'},
+      {label:'Игр сыграно',       value: r.gamesPlayed || 0,  extra:''}
+    ];
+    let html = `<div class="rec-head"><span>${name}</span><span>${new Date().toLocaleDateString('ru-RU')}</span></div>`;
+    rows.forEach((row, i) => {
+      html += `<div class="rec-row">
+        <div class="rec-rank">${i+1}</div>
+        <div class="rec-name">${row.label}</div>
+        <div class="rec-value">${row.value}</div>
+        <div class="rec-extra">${row.extra}</div>
+      </div>`;
+    });
+    body.innerHTML = html;
+  } else {
+    body.innerHTML = '<div class="rec-empty">ЗАГРУЗКА...</div>';
+    fetchLeaderboard(arr => {
+      if (!arr.length){
+        body.innerHTML = '<div class="rec-empty">Пока нет записей.<br>Сыграй в выживание, чтобы попасть в ТОП!</div>';
+        return;
+      }
+      let html = '<div class="rec-head"><span>ТОП-20 ГЛОБАЛЬНО</span><span>SCORE</span></div>';
+      arr.forEach((r, i) => {
+        const cls = i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : '';
+        html += `<div class="rec-row ${cls}">
+          <div class="rec-rank">#${i+1}</div>
+          <div class="rec-name">${r.name}</div>
+          <div class="rec-extra">Волна ${r.wave} · ${r.mode}</div>
+          <div class="rec-value">${r.score}</div>
+        </div>`;
+      });
+      body.innerHTML = html;
+    });
+  }
+}
+
+// ============ ТУТОРИАЛ ============
 const TUTORIAL_STEPS = [
-  {id:'move',   text:'Двигайся: W A S D (или джойстик)', key:'WASD',    done:false},
-  {id:'look',   text:'Осмотрись: мышь (свайп справа)',   key:'МЫШЬ',    done:false},
-  {id:'shoot',  text:'Стреляй по красным мишеням: ЛКМ',  key:'ЛКМ',     done:false},
-  {id:'reload', text:'Перезарядись: R',                   key:'R',       done:false},
-  {id:'grenade',text:'Брось гранату: G (или ПКМ)',        key:'G',       done:false},
-  {id:'pickup', text:'Подойди к ящику и нажми E',         key:'E',       done:false},
-  {id:'kill',   text:'Уничтожь 3 мишени',                 key:'ЦЕЛЬ',    done:false}
+  {id:'move',   text:'Двигайся: W A S D (или джойстик)', done:false},
+  {id:'look',   text:'Осмотрись: мышь (свайп справа)',   done:false},
+  {id:'shoot',  text:'Стреляй по красным мишеням: ЛКМ',  done:false},
+  {id:'reload', text:'Перезарядись: R',                   done:false},
+  {id:'grenade',text:'Брось гранату: G (или ПКМ)',        done:false},
+  {id:'pickup', text:'Подойди к ящику и нажми E',         done:false},
+  {id:'kill',   text:'Уничтожь 3 мишени',                 done:false}
 ];
 let tutorialState = null;
 function initTutorial(){
@@ -107,6 +328,7 @@ function updateTutorialHUD(){
   el.innerHTML = `<div class="tut-title">🎓 ТРЕНИРОВКА</div>${list}`;
 }
 
+// ============ АПГРЕЙДЫ ============
 const UPGRADES = {
   damage:{name:'Урон',icon:'💥',desc:'+10% урона за уровень',maxLevel:5,costs:[200,400,600,800,1000]},
   reload:{name:'Скорость перезарядки',icon:'⚡',desc:'−10% времени перезарядки',maxLevel:5,costs:[150,300,450,600,750]},
@@ -116,6 +338,7 @@ function getDamageMultiplier(){ return 1 + 0.1 * (PROGRESS.upgrades?.damage || 0
 function getReloadMultiplier(){ return Math.max(0.5, 1 - 0.1 * (PROGRESS.upgrades?.reload || 0)); }
 function getMaxHealth(){ return 100 + 20 * (PROGRESS.upgrades?.health || 0); }
 
+// ============ СОСТОЯНИЕ ============
 let scene, camera, renderer, composer;
 let score = 0, health = 100, wave = 1, currentLevel = 1;
 let hitsTaken = 0;
@@ -694,6 +917,10 @@ function init(){
   initMobileControls();
   renderLevelGrid();
   updateCoinsDisplay();
+  updateAchCount();
+  const best = Math.max(...Object.values(PROGRESS.records.survivalBest || {easy:0,normal:0,hard:0,nightmare:0}), 0);
+  const el = document.getElementById('survivalBest');
+  if (el) el.textContent = best;
   animate();
 }
 
@@ -753,23 +980,17 @@ function buildLevelEnvironment(levelNum){
       scene.add(sun);
     }
   }
-
   const groundTex = createGroundTexture(lvl.theme);
   const gcTint = horrorMode ? 0x808080 : 0xffffff;
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(100, 100, 20, 20),
-    new THREE.MeshStandardMaterial({
-      map: groundTex, color: gcTint, roughness: 1, metalness: 0.02
-    })
+    new THREE.MeshStandardMaterial({map: groundTex, color: gcTint, roughness: 1, metalness: 0.02})
   );
   ground.rotation.x = -Math.PI/2;
   ground.receiveShadow = true;
   scene.add(ground);
-
   const wallTex = createWallTexture();
-  const wallMat = new THREE.MeshStandardMaterial({
-    map: wallTex, color: horrorMode ? 0x666666 : 0xaaaaaa, roughness: 0.95
-  });
+  const wallMat = new THREE.MeshStandardMaterial({map: wallTex, color: horrorMode ? 0x666666 : 0xaaaaaa, roughness: 0.95});
   [
     {pos:[0,5,-48],size:[96,10,1]}, {pos:[0,5,48],size:[96,10,1]},
     {pos:[-48,5,0],size:[1,10,96]}, {pos:[48,5,0],size:[1,10,96]}
@@ -780,11 +1001,8 @@ function buildLevelEnvironment(levelNum){
     wall.userData.size = {x:w.size[0], y:w.size[1], z:w.size[2]};
     scene.add(wall); obstacles.push(wall);
   });
-
   const metalTex = createMetalTexture();
-  const obsMat = new THREE.MeshStandardMaterial({
-    map: metalTex, color: horrorMode ? 0x666666 : 0x999999, roughness: 0.7, metalness: 0.4
-  });
+  const obsMat = new THREE.MeshStandardMaterial({map: metalTex, color: horrorMode ? 0x666666 : 0x999999, roughness: 0.7, metalness: 0.4});
   [[12,1,8,3,2,3],[-12,1,8,3,2,3],[12,1,-8,3,2,3],[-12,1,-8,3,2,3]].forEach(([x,y,z,sx,sy,sz]) => {
     const c = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), obsMat);
     c.position.set(x, y, z);
@@ -792,7 +1010,6 @@ function buildLevelEnvironment(levelNum){
     c.userData.size = {x:sx, y:sy, z:sz};
     scene.add(c); obstacles.push(c);
   });
-
   const woodTex = createWoodTexture();
   const woodMat = new THREE.MeshStandardMaterial({map: woodTex, color: 0xdddddd, roughness: 0.9});
   [[-20,0.5,-20],[20,0.5,-20],[-20,0.5,20],[20,0.5,20]].forEach(([x,y,z]) => {
@@ -803,7 +1020,6 @@ function buildLevelEnvironment(levelNum){
     box.userData.size = {x:1, y:1, z:1};
     scene.add(box); obstacles.push(box);
   });
-
   if (isTutorial){
     for (let i = 0; i < 3; i++){
       const dummy = new THREE.Group();
@@ -832,7 +1048,6 @@ function buildLevelEnvironment(levelNum){
     scene.add(crate);
     lootCrates.push(crate);
   }
-
   if (horrorMode && !isTutorial){
     flashlight = new THREE.SpotLight(0xfff2d0, 1.5, 25, Math.PI/7, 0.4, 1.5);
     flashlight.position.set(0,0,0);
@@ -842,11 +1057,10 @@ function buildLevelEnvironment(levelNum){
   } else flashlight = null;
 }
 
-// ============ УЛУЧШЕННЫЕ МОДЕЛИ ОРУЖИЯ ============
+// ============ ОРУЖИЕ ============
 function createWeapon(type){
   if (weaponGroup) camera.remove(weaponGroup);
   weaponGroup = new THREE.Group();
-
   const black = new THREE.MeshStandardMaterial({color:0x0a0a0a, metalness:0.6, roughness:0.6});
   const metal = new THREE.MeshStandardMaterial({color:0x1a1a1a, metalness:0.95, roughness:0.25});
   const metalLight = new THREE.MeshStandardMaterial({color:0x333333, metalness:0.9, roughness:0.3});
@@ -857,8 +1071,7 @@ function createWeapon(type){
 
   function addRail(obj, x, y, z, len){
     const r = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.008, len), rail);
-    r.position.set(x, y, z);
-    obj.add(r);
+    r.position.set(x, y, z); obj.add(r);
     for (let i = 0; i < len * 40; i++){
       const slot = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.006, 0.004), black);
       slot.position.set(x, y + 0.002, z - len/2 + i * 0.025 + 0.01);
@@ -872,13 +1085,11 @@ function createWeapon(type){
     const slide = new THREE.Mesh(new THREE.BoxGeometry(0.048, 0.035, 0.24), metal);
     slide.position.set(0, 0.04, -0.05); weaponGroup.add(slide);
     const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.1, 10), metal);
-    barrel.rotation.x = Math.PI/2;
-    barrel.position.set(0, 0.04, -0.19); weaponGroup.add(barrel);
+    barrel.rotation.x = Math.PI/2; barrel.position.set(0, 0.04, -0.19); weaponGroup.add(barrel);
     const mag = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.13, 0.05), metal);
     mag.position.set(0, -0.09, 0.01); weaponGroup.add(mag);
     const gripMesh = new THREE.Mesh(new THREE.BoxGeometry(0.038, 0.16, 0.06), grip);
-    gripMesh.position.set(0, -0.13, 0.07);
-    gripMesh.rotation.x = 0.22; weaponGroup.add(gripMesh);
+    gripMesh.position.set(0, -0.13, 0.07); gripMesh.rotation.x = 0.22; weaponGroup.add(gripMesh);
     const front = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.015, 0.008), black);
     front.position.set(0, 0.065, -0.16); weaponGroup.add(front);
     const rear = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.012, 0.008), black);
@@ -890,20 +1101,16 @@ function createWeapon(type){
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.075, 0.5), metal);
     body.position.set(0, 0, -0.2); weaponGroup.add(body);
     const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.3, 12), metal);
-    barrel.rotation.x = Math.PI/2;
-    barrel.position.set(0, 0.005, -0.55); weaponGroup.add(barrel);
+    barrel.rotation.x = Math.PI/2; barrel.position.set(0, 0.005, -0.55); weaponGroup.add(barrel);
     const gas = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.25, 8), metalLight);
-    gas.rotation.x = Math.PI/2;
-    gas.position.set(0, 0.035, -0.5); weaponGroup.add(gas);
+    gas.rotation.x = Math.PI/2; gas.position.set(0, 0.035, -0.5); weaponGroup.add(gas);
     const handguard = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.22), black);
     handguard.position.set(0, 0, -0.4); weaponGroup.add(handguard);
     addRail(weaponGroup, 0, 0.055, -0.4, 0.2);
     const mag = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.15, 0.05), metal);
-    mag.position.set(0, -0.11, 0.02);
-    mag.rotation.x = -0.15; weaponGroup.add(mag);
+    mag.position.set(0, -0.11, 0.02); mag.rotation.x = -0.15; weaponGroup.add(mag);
     const gripMesh = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.14, 0.055), grip);
-    gripMesh.position.set(0, -0.1, 0.12);
-    gripMesh.rotation.x = 0.28; weaponGroup.add(gripMesh);
+    gripMesh.position.set(0, -0.1, 0.12); gripMesh.rotation.x = 0.28; weaponGroup.add(gripMesh);
     const stock = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.09, 0.18), black);
     stock.position.set(0, 0.005, 0.24); weaponGroup.add(stock);
     const stockPad = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.12, 0.03), grip);
@@ -917,16 +1124,13 @@ function createWeapon(type){
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.085, 0.45), metal);
     body.position.set(0, 0, -0.15); weaponGroup.add(body);
     const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.4, 12), metal);
-    barrel.rotation.x = Math.PI/2;
-    barrel.position.set(0, 0.01, -0.5); weaponGroup.add(barrel);
+    barrel.rotation.x = Math.PI/2; barrel.position.set(0, 0.01, -0.5); weaponGroup.add(barrel);
     const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.32, 10), metalLight);
-    tube.rotation.x = Math.PI/2;
-    tube.position.set(0, -0.035, -0.42); weaponGroup.add(tube);
+    tube.rotation.x = Math.PI/2; tube.position.set(0, -0.035, -0.42); weaponGroup.add(tube);
     const pump = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.05, 0.14), wood);
     pump.position.set(0, -0.045, -0.36); weaponGroup.add(pump);
     const gripMesh = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.15, 0.06), wood);
-    gripMesh.position.set(0, -0.11, 0.13);
-    gripMesh.rotation.x = 0.25; weaponGroup.add(gripMesh);
+    gripMesh.position.set(0, -0.11, 0.13); gripMesh.rotation.x = 0.25; weaponGroup.add(gripMesh);
     const stock = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.1, 0.2), wood);
     stock.position.set(0, 0, 0.26); weaponGroup.add(stock);
     weaponGroup.position.set(0.3, -0.28, -0.5);
@@ -935,28 +1139,23 @@ function createWeapon(type){
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.075, 0.6), metal);
     body.position.set(0, 0, -0.25); weaponGroup.add(body);
     const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.012, 0.5, 12), metal);
-    barrel.rotation.x = Math.PI/2;
-    barrel.position.set(0, 0.005, -0.8); weaponGroup.add(barrel);
+    barrel.rotation.x = Math.PI/2; barrel.position.set(0, 0.005, -0.8); weaponGroup.add(barrel);
     const muzzle = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.018, 0.06, 10), metalLight);
-    muzzle.rotation.x = Math.PI/2;
-    muzzle.position.set(0, 0.005, -1.06); weaponGroup.add(muzzle);
+    muzzle.rotation.x = Math.PI/2; muzzle.position.set(0, 0.005, -1.06); weaponGroup.add(muzzle);
     const mag = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.12, 0.055), metal);
     mag.position.set(0, -0.1, -0.1); weaponGroup.add(mag);
     const gripMesh = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.15, 0.06), grip);
-    gripMesh.position.set(0, -0.1, 0.05);
-    gripMesh.rotation.x = 0.28; weaponGroup.add(gripMesh);
+    gripMesh.position.set(0, -0.1, 0.05); gripMesh.rotation.x = 0.28; weaponGroup.add(gripMesh);
     const stock = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.11, 0.22), black);
     stock.position.set(0, 0.01, 0.2); weaponGroup.add(stock);
     const cheek = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.03, 0.14), grip);
     cheek.position.set(0, 0.08, 0.22); weaponGroup.add(cheek);
     const scopeBody = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.28, 14), rail);
-    scopeBody.rotation.x = Math.PI/2;
-    scopeBody.position.set(0, 0.075, -0.2); weaponGroup.add(scopeBody);
+    scopeBody.rotation.x = Math.PI/2; scopeBody.position.set(0, 0.075, -0.2); weaponGroup.add(scopeBody);
     const lensF = new THREE.Mesh(new THREE.CircleGeometry(0.03, 14), glass);
     lensF.position.set(0, 0.075, -0.342); weaponGroup.add(lensF);
     const lensR = new THREE.Mesh(new THREE.CircleGeometry(0.03, 14), glass);
-    lensR.position.set(0, 0.075, -0.058);
-    lensR.rotation.y = Math.PI; weaponGroup.add(lensR);
+    lensR.position.set(0, 0.075, -0.058); lensR.rotation.y = Math.PI; weaponGroup.add(lensR);
     [0.09, -0.09].forEach(dz => {
       const ring = new THREE.Mesh(new THREE.TorusGeometry(0.034, 0.006, 8, 12), black);
       ring.rotation.y = Math.PI/2;
@@ -982,8 +1181,7 @@ function createWeapon(type){
       mag.position.set(0, -0.08, 0); g.add(mag);
       const gripMesh = new THREE.Mesh(new THREE.BoxGeometry(0.034, 0.15, 0.055), grip);
       gripMesh.position.set(0, -0.12, 0.07); gripMesh.rotation.x = 0.22; g.add(gripMesh);
-      g.position.set(dx, 0, 0);
-      weaponGroup.add(g);
+      g.position.set(dx, 0, 0); weaponGroup.add(g);
     });
     weaponGroup.position.set(0, -0.25, -0.5);
   }
@@ -991,27 +1189,21 @@ function createWeapon(type){
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.4), metal);
     body.position.set(0, 0, -0.15); weaponGroup.add(body);
     const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.35, 14), new THREE.MeshStandardMaterial({color:0xcc2200, metalness:0.85, roughness:0.35}));
-    tank.position.set(-0.09, -0.05, -0.1);
-    tank.rotation.z = Math.PI/2; weaponGroup.add(tank);
+    tank.position.set(-0.09, -0.05, -0.1); tank.rotation.z = Math.PI/2; weaponGroup.add(tank);
     const tank2 = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.35, 14), new THREE.MeshStandardMaterial({color:0x228800, metalness:0.85, roughness:0.35}));
-    tank2.position.set(-0.09, -0.05, 0.28);
-    tank2.rotation.z = Math.PI/2; weaponGroup.add(tank2);
+    tank2.position.set(-0.09, -0.05, 0.28); tank2.rotation.z = Math.PI/2; weaponGroup.add(tank2);
     const hose = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.25, 8), new THREE.MeshStandardMaterial({color:0x1a1a1a, roughness:0.8}));
-    hose.rotation.z = Math.PI/2;
-    hose.position.set(-0.05, -0.09, 0.14); weaponGroup.add(hose);
+    hose.rotation.z = Math.PI/2; hose.position.set(-0.05, -0.09, 0.14); weaponGroup.add(hose);
     const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.025, 0.28, 10), metal);
-    nozzle.rotation.x = Math.PI/2;
-    nozzle.position.set(0, 0.01, -0.44); weaponGroup.add(nozzle);
+    nozzle.rotation.x = Math.PI/2; nozzle.position.set(0, 0.01, -0.44); weaponGroup.add(nozzle);
     const pilot = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 8), new THREE.MeshBasicMaterial({color:0xff6600}));
     pilot.position.set(0, 0.03, -0.6); weaponGroup.add(pilot);
     const pilotLight = new THREE.PointLight(0xff6600, 0.5, 2);
     pilotLight.position.copy(pilot.position); weaponGroup.add(pilotLight);
     const gripMesh = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.15, 0.06), grip);
-    gripMesh.position.set(0, -0.1, 0.1);
-    gripMesh.rotation.x = 0.25; weaponGroup.add(gripMesh);
+    gripMesh.position.set(0, -0.1, 0.1); gripMesh.rotation.x = 0.25; weaponGroup.add(gripMesh);
     weaponGroup.position.set(0.28, -0.28, -0.5);
   }
-
   const flash = new THREE.PointLight(0xffaa00, 0, 8);
   flash.position.set(0, 0.03, -1.0);
   weaponGroup.add(flash);
@@ -1070,7 +1262,6 @@ function createZombie(isBoss, type = 'melee'){
   g.position.y = 0.9*size;
   return g;
 }
-
 function spawnEnemy(isBoss = false, forcedType = null){
   if (!isGameActive) return;
   const lvl = LEVELS[currentLevel] || LEVELS[1];
@@ -1141,6 +1332,7 @@ function checkBossPhase(){
   }
 }
 
+// ============ ИГРОВОЙ ФЛОУ ============
 function startGame(level = 1, survival = null){
   currentLevel = level;
   survivalMode = survival;
@@ -1160,14 +1352,18 @@ function startGame(level = 1, survival = null){
   verticalVelocity = 0; playerY = 1.7; isJumping = false;
   bobPhase = 0; breathPhase = 0; shakeAmount = 0;
   keys.w = keys.a = keys.s = keys.d = false;
+  sessionStats = {
+    kills: 0, headshots: 0, headshotStreak: 0, maxStreak: 0,
+    grenadeKills: 0, flameKills: 0, medkitsUsed: 0, damageTaken: 0
+  };
+  PROGRESS.records.gamesPlayed = (PROGRESS.records.gamesPlayed || 0) + 1;
+  saveProgress();
 
   buildLevelEnvironment(level);
   createWeapon(currentWeapon);
-
   document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
   document.getElementById('hud').style.display = 'block';
   renderer.domElement.style.display = 'block';
-
   if (LEVELS[level]?.isTutorial){
     initTutorial();
     document.getElementById('tutorialHUD').style.display = 'block';
@@ -1181,11 +1377,11 @@ function startGame(level = 1, survival = null){
   updateHUD();
   startHorrorAmbient();
   startDynamicMusic();
+  checkAchConditions();
   if (!isMobile){
     setTimeout(() => { if (renderer.domElement.requestPointerLock) renderer.domElement.requestPointerLock(); }, 100);
   }
 }
-
 function startWave(){
   const lvl = LEVELS[currentLevel] || LEVELS[1];
   if (lvl.isTutorial) return;
@@ -1195,6 +1391,14 @@ function startWave(){
   let waveEnemiesRemaining = mode ? 10 + wave * 3 : 5 + wave * 2;
   showToast(`Волна ${wave}`, 1500);
   updateHUD();
+  if (survivalMode){
+    const key = survivalMode.name === 'Лёгкий' ? 'easy' : survivalMode.name === 'Обычный' ? 'normal' : survivalMode.name === 'Сложный' ? 'hard' : 'nightmare';
+    updateSurvivalRecord(key, wave);
+    if (wave >= 10) unlockAch('wave10');
+    if (wave >= 20) unlockAch('wave20');
+    if (wave >= 30) unlockAch('wave30');
+    if (key === 'nightmare' && wave >= 10) unlockAch('hardcore');
+  }
   if (waveSpawnTimer) clearInterval(waveSpawnTimer);
   waveSpawnTimer = setInterval(() => {
     if (!isGameActive) return;
@@ -1242,6 +1446,11 @@ function completeTutorial(){
   saveProgress();
   updateCoinsDisplay();
   renderLevelGrid();
+  unlockAch('trained');
+  if (stars >= 3) unlockAch('threeStars');
+  if (tutorialState.damageTaken === 0) unlockAch('invincible');
+  updateBestScore(score);
+  checkAchConditions();
   document.getElementById('hud').style.display = 'none';
   document.getElementById('tutorialHUD').style.display = 'none';
   renderer.domElement.style.display = 'none';
@@ -1268,6 +1477,11 @@ function completeLevel(){
   if (PROGRESS.levels[currentLevel + 1]) PROGRESS.levels[currentLevel + 1].unlocked = true;
   saveProgress();
   updateCoinsDisplay();
+  updateBestScore(score);
+  if (survivalMode) submitToLeaderboard();
+  if (sessionStats.damageTaken === 0) unlockAch('invincible');
+  if (currentLevel === 8) unlockAch('bossAll');
+  checkAchConditions();
   if (document.pointerLockElement) document.exitPointerLock();
   setTimeout(() => {
     document.getElementById('hud').style.display = 'none';
@@ -1288,6 +1502,11 @@ function gameOver(){
   if (waveSpawnTimer) clearInterval(waveSpawnTimer);
   stopHorrorAmbient();
   stopDynamicMusic();
+  PROGRESS.records.totalDeaths = (PROGRESS.records.totalDeaths || 0) + 1;
+  updateBestScore(score);
+  if (survivalMode) submitToLeaderboard();
+  saveProgress();
+  checkAchConditions();
   showToast('Вы погибли...', 2000);
   if (document.pointerLockElement) document.exitPointerLock();
   setTimeout(() => {
@@ -1331,23 +1550,28 @@ function updateEnemies(delta){
         continue;
       }
       createCorpse(e);
+      sessionStats.kills++;
+      PROGRESS.records.totalKills = (PROGRESS.records.totalKills || 0) + 1;
       if (ud.isBoss){
         currentBoss = null;
         addScore(5000); addCoins(500);
         createLootCrate(e.position.clone(), 'sniper');
         showToast('💀 БОСС ПОВЕРЖЕН!', 3000);
         stopDynamicMusic();
+        unlockAch('bossKill');
+        if (currentLevel === 8) unlockAch('bossAll');
       } else {
         addScore(100);
         if (Math.random() < 0.3) createLootCrate(e.position.clone(), ud.weaponDrop);
       }
+      saveProgress();
+      checkAchConditions();
       scene.remove(e);
       enemies.splice(i, 1);
       checkWaveComplete();
       continue;
     }
     if (ud.isTarget) continue;
-
     const dir = new THREE.Vector3().subVectors(playerPos, e.position);
     dir.y = 0;
     const dist = dir.length();
@@ -1473,11 +1697,20 @@ function explodeGrenade(pos, damage, radius, isPlayer){
   if (!isPlayer && pos.distanceTo(camera.position) < radius){
     takeDamage(damage * (1 - pos.distanceTo(camera.position)/radius));
   }
+  let killedByGrenade = 0;
   enemies.forEach(e => {
     if (e.userData.isTarget) return;
     const d = pos.distanceTo(e.position);
-    if (d < radius) e.userData.health -= damage * (1 - d/radius);
+    if (d < radius){
+      const wasAlive = e.userData.health > 0;
+      e.userData.health -= damage * (1 - d/radius);
+      if (wasAlive && e.userData.health <= 0) killedByGrenade++;
+    }
   });
+  if (isPlayer && killedByGrenade >= 5){
+    sessionStats.grenadeKills = Math.max(sessionStats.grenadeKills, killedByGrenade);
+    unlockAch('grenadier');
+  }
   const fl = new THREE.PointLight(0xff6600, 3, radius*2);
   fl.position.copy(pos); scene.add(fl);
   setTimeout(() => scene.remove(fl), 100);
@@ -1490,6 +1723,7 @@ function takeDamage(amount){
   if (!isGameActive) return;
   health -= amount;
   hitsTaken++;
+  sessionStats.damageTaken += amount;
   if (tutorialState) tutorialState.damageTaken += amount;
   shakeAmount = Math.min(1, shakeAmount + 0.3);
   playHurtSoundEnhanced();
@@ -1499,9 +1733,15 @@ function takeDamage(amount){
   if (health <= 0){ health = 0; gameOver(); }
 }
 function healPlayer(amount){ health = Math.min(getMaxHealth(), health + amount); playHealSoundEnhanced(); updateHUD(); }
-function useMedkit(){ if (medkits > 0 && health < getMaxHealth()){ medkits--; healPlayer(50); updateHUD(); } }
+function useMedkit(){
+  if (medkits > 0 && health < getMaxHealth()){
+    medkits--; healPlayer(50); updateHUD();
+    sessionStats.medkitsUsed++;
+    if (sessionStats.medkitsUsed >= 10) unlockAch('healer');
+  }
+}
 function addScore(p){ score += p; updateHUD(); }
-function addCoins(a){ PROGRESS.coins += a; saveProgress(); updateCoinsDisplay(); }
+function addCoins(a){ PROGRESS.coins += a; saveProgress(); updateCoinsDisplay(); checkAchConditions(); }
 
 function createLootCrate(pos, weaponKey){
   const c = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), new THREE.MeshStandardMaterial({color:0x8a6a2a, metalness:0.5, roughness:0.5}));
@@ -1576,8 +1816,20 @@ function shoot(){
         playHitSoundEnhanced();
         createBloodBurst(hit.point, isHead);
         showHitMarker(isHead);
-        if (isHead){ playHeadshotSound(); addScore(25); }
-        else addScore(10);
+        if (isHead){
+          playHeadshotSound();
+          addScore(25);
+          PROGRESS.records.totalHeadshots = (PROGRESS.records.totalHeadshots || 0) + 1;
+          sessionStats.headshots++;
+          sessionStats.headshotStreak++;
+          if (sessionStats.headshotStreak > sessionStats.maxStreak) sessionStats.maxStreak = sessionStats.headshotStreak;
+          if (currentWeapon === 'flamethrower') sessionStats.flameKills++;
+          saveProgress();
+          checkAchConditions();
+        } else {
+          addScore(10);
+          sessionStats.headshotStreak = 0;
+        }
       }
     } else {
       const wh = ray.intersectObjects(obstacles, true);
@@ -1705,11 +1957,15 @@ function initUI(){
   document.getElementById('multiplayerBtn')?.addEventListener('click', () => { showScreen('multiplayerMenu'); });
   document.getElementById('shopBtn')?.addEventListener('click', () => { renderShop('skins'); updateCoinsDisplay(); showScreen('shop'); });
   document.getElementById('settingsBtn')?.addEventListener('click', () => showScreen('settings'));
+  document.getElementById('achBtn')?.addEventListener('click', () => { renderAchievements(); showScreen('achScreen'); });
+  document.getElementById('recordsBtn')?.addEventListener('click', () => { renderRecords('personal'); showScreen('recordsScreen'); });
   document.getElementById('backToMenu')?.addEventListener('click', () => showScreen('menu'));
   document.getElementById('backFromShop')?.addEventListener('click', () => showScreen('menu'));
   document.getElementById('closeSettings')?.addEventListener('click', () => showScreen('menu'));
   document.getElementById('backFromSurvival')?.addEventListener('click', () => showScreen('menu'));
   document.getElementById('backFromMultiplayer')?.addEventListener('click', () => showScreen('menu'));
+  document.getElementById('backFromAch')?.addEventListener('click', () => showScreen('menu'));
+  document.getElementById('backFromRecords')?.addEventListener('click', () => showScreen('menu'));
   document.getElementById('horrorToggle')?.addEventListener('change', e => {
     horrorMode = e.target.checked;
     try{ localStorage.setItem('zombieshoot_horror', horrorMode); }catch(e){}
@@ -1727,6 +1983,13 @@ function initUI(){
       document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
       renderShop(tab.dataset.tab);
+    });
+  });
+  document.querySelectorAll('.rec-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.rec-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      renderRecords(tab.dataset.tab);
     });
   });
   if (document.getElementById('horrorToggle')) document.getElementById('horrorToggle').checked = horrorMode;
@@ -1791,7 +2054,7 @@ function renderSurvivalGrid(){
   }
 }
 function updateCoinsDisplay(){
-  ['menuCoins','mapCoins','shopCoins','survivalCoins','mpCoins'].forEach(id => {
+  ['menuCoins','mapCoins','shopCoins','survivalCoins','mpCoins','recCoins'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = PROGRESS.coins;
   });
@@ -1869,204 +2132,4 @@ function renderShop(tab = 'weapons'){
       const sk = SKINS[key];
       const owned = PROGRESS.ownedSkins.includes(key);
       const eq = PROGRESS.currentSkin === key;
-      let btn = 'КУПИТЬ', dis = false;
-      if (eq){ btn = '✅ НАДЕТ'; dis = true; }
-      else if (owned) btn = 'НАДЕТЬ';
-      else if (PROGRESS.coins < sk.cost){ btn = 'МАЛО МОНЕТ'; dis = true; }
-      html += `
-        <div class="shop-item ${owned ? 'owned' : ''} ${eq ? 'equipped' : ''}">
-          <div class="item-icon">👤</div>
-          <div class="item-name">${sk.name}</div>
-          <div class="item-desc">Цвет зомби-игрока</div>
-          <div class="item-price"><svg class="ico-sm"><use href="#icon-coin"/></svg> ${owned ? (eq ? '—' : 'Куплено') : sk.cost}</div>
-          <button class="item-btn ${eq ? 'equipped-btn' : ''}" ${dis ? 'disabled' : ''} onclick="handleSkin('${key}')">${btn}</button>
-        </div>`;
-    }
-    html += '</div>';
-    body.innerHTML = html;
-  }
-}
-function handleWeapon(key){
-  if (PROGRESS.ownedWeapons.includes(key)){ switchWeapon(key); playClickSound(500, 0.05); }
-  else {
-    const w = WEAPONS[key];
-    if (PROGRESS.coins >= w.cost){
-      PROGRESS.coins -= w.cost;
-      PROGRESS.ownedWeapons.push(key);
-      saveProgress(); playBuySound(); switchWeapon(key);
-    } else playErrorSound();
-  }
-  updateCoinsDisplay(); renderShop('weapons');
-}
-function handleSkin(key){
-  if (PROGRESS.ownedSkins.includes(key)){ PROGRESS.currentSkin = key; saveProgress(); playClickSound(500, 0.05); }
-  else {
-    const sk = SKINS[key];
-    if (PROGRESS.coins >= sk.cost){
-      PROGRESS.coins -= sk.cost;
-      PROGRESS.ownedSkins.push(key);
-      PROGRESS.currentSkin = key;
-      saveProgress(); playBuySound();
-    } else playErrorSound();
-  }
-  updateCoinsDisplay(); renderShop('skins');
-}
-window.handleWeapon = handleWeapon;
-window.handleSkin = handleSkin;
-
-function setupControls(){
-  document.addEventListener('keydown', e => {
-    const k = e.code;
-    if (k === 'KeyW') keys.w = true;
-    if (k === 'KeyA') keys.a = true;
-    if (k === 'KeyS') keys.s = true;
-    if (k === 'KeyD') keys.d = true;
-    if (k === 'KeyR') reload();
-    if (k === 'KeyE') pickupLoot();
-    if (k === 'KeyQ') useMedkit();
-    if (k === 'KeyG') throwPlayerGrenade();
-    if (k === 'KeyF'){ if (flashlight) flashlight.visible = !flashlight.visible; }
-    if (k === 'Digit1') switchWeapon('pistol');
-    if (k === 'Digit2') switchWeapon('rifle');
-    if (k === 'Digit3') switchWeapon('shotgun');
-    if (k === 'Digit4') switchWeapon('sniper');
-    if (k === 'Digit5') switchWeapon('dualPistols');
-    if (k === 'Digit6') switchWeapon('flamethrower');
-    if (k === 'Escape'){
-      if (isGameActive){
-        isGameActive = false;
-        stopHorrorAmbient(); stopDynamicMusic();
-        document.getElementById('hud').style.display = 'none';
-        document.getElementById('tutorialHUD').style.display = 'none';
-        document.getElementById('menu').style.display = 'flex';
-        renderer.domElement.style.display = 'none';
-        if (document.pointerLockElement) document.exitPointerLock();
-      }
-    }
-    if (k === 'Space'){ e.preventDefault(); jump(); }
-  });
-  document.addEventListener('keyup', e => {
-    const k = e.code;
-    if (k === 'KeyW') keys.w = false;
-    if (k === 'KeyA') keys.a = false;
-    if (k === 'KeyS') keys.s = false;
-    if (k === 'KeyD') keys.d = false;
-  });
-  document.addEventListener('mousemove', e => {
-    if (!isGameActive) return;
-    if (document.pointerLockElement === renderer.domElement){
-      if (e.movementX !== 0 || e.movementY !== 0){
-        yaw -= e.movementX * MOUSE_SENSITIVITY;
-        pitch -= e.movementY * MOUSE_SENSITIVITY;
-        pitch = clamp(pitch, -Math.PI/2 + 0.1, Math.PI/2 - 0.1);
-        if (tutorialState && !tutorialState.looked && (Math.abs(e.movementX) > 3 || Math.abs(e.movementY) > 3)){
-          tutorialState.looked = true; markTutStep('look');
-        }
-      }
-    }
-  });
-  document.addEventListener('mousedown', e => {
-    if (!isGameActive) return;
-    if (e.button === 0){
-      isMouseDown = true;
-      if (!document.pointerLockElement) renderer.domElement.requestPointerLock();
-      shoot();
-    }
-    if (e.button === 2){ e.preventDefault(); throwPlayerGrenade(); }
-  });
-  document.addEventListener('mouseup', e => { if (e.button === 0) isMouseDown = false; });
-  document.addEventListener('contextmenu', e => { if (isGameActive) e.preventDefault(); });
-}
-function initMobileControls(){
-  if (!isMobile) return;
-  const jz = document.getElementById('joystickZone');
-  const base = document.getElementById('joystickBase');
-  const knob = document.getElementById('joystickKnob');
-  const lookZone = document.getElementById('mobileControls');
-  if (jz && base && knob){
-    jz.addEventListener('touchstart', e => {
-      const t = e.changedTouches[0];
-      joystickActive = true; joystickTouchId = t.identifier;
-      joystickStartX = t.clientX; joystickStartY = t.clientY;
-      base.style.display = 'block';
-      base.style.left = t.clientX + 'px';
-      base.style.top = t.clientY + 'px';
-    }, {passive:true});
-    jz.addEventListener('touchmove', e => {
-      for (const t of e.changedTouches){
-        if (t.identifier === joystickTouchId){
-          joystickDeltaX = t.clientX - joystickStartX;
-          joystickDeltaY = t.clientY - joystickStartY;
-          const max = 50, d = Math.hypot(joystickDeltaX, joystickDeltaY);
-          if (d > max){ joystickDeltaX = (joystickDeltaX/d)*max; joystickDeltaY = (joystickDeltaY/d)*max; }
-          knob.style.transform = `translate(calc(-50% + ${joystickDeltaX}px), calc(-50% + ${joystickDeltaY}px))`;
-        }
-      }
-    }, {passive:true});
-    jz.addEventListener('touchend', e => {
-      for (const t of e.changedTouches){
-        if (t.identifier === joystickTouchId){
-          joystickActive = false; joystickTouchId = null;
-          joystickDeltaX = 0; joystickDeltaY = 0;
-          base.style.display = 'none';
-          knob.style.transform = 'translate(-50%, -50%)';
-        }
-      }
-    }, {passive:true});
-  }
-  const bind = (id, action) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener('touchstart', e => { e.preventDefault(); action(); el.classList.add('pressed'); }, {passive:false});
-    el.addEventListener('touchend', e => { e.preventDefault(); el.classList.remove('pressed'); }, {passive:false});
-  };
-  bind('btnShoot', () => shoot());
-  bind('btnReload', () => reload());
-  bind('btnJump', () => jump());
-  bind('btnMedkit', () => useMedkit());
-  bind('btnGrenade', () => throwPlayerGrenade());
-  bind('btnPickup', () => pickupLoot());
-  bind('btnWeapon', () => {
-    const list = PROGRESS.ownedWeapons;
-    const i = list.indexOf(currentWeapon);
-    switchWeapon(list[(i + 1) % list.length]);
-  });
-  if (lookZone){
-    lookZone.addEventListener('touchstart', e => {
-      for (const t of e.changedTouches){
-        if (t.clientX > window.innerWidth * 0.5 && !joystickActive){
-          lookTouchId = t.identifier;
-          lookLastX = t.clientX; lookLastY = t.clientY;
-        }
-      }
-    }, {passive:true});
-    lookZone.addEventListener('touchmove', e => {
-      for (const t of e.changedTouches){
-        if (t.identifier === lookTouchId){
-          yaw -= (t.clientX - lookLastX) * 0.005;
-          pitch -= (t.clientY - lookLastY) * 0.005;
-          pitch = clamp(pitch, -Math.PI/2 + 0.1, Math.PI/2 - 0.1);
-          lookLastX = t.clientX; lookLastY = t.clientY;
-          if (tutorialState && !tutorialState.looked) { tutorialState.looked = true; markTutStep('look'); }
-        }
-      }
-    }, {passive:true});
-    lookZone.addEventListener('touchend', e => {
-      for (const t of e.changedTouches){
-        if (t.identifier === lookTouchId) lookTouchId = null;
-      }
-    }, {passive:true});
-  }
-}
-window.addEventListener('resize', () => {
-  if (!camera) return;
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-  if (composer) composer.setSize(innerWidth, innerHeight);
-});
-window.addEventListener('load', () => {
-  document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
-  document.getElementById('menu').style.display = 'flex';
-  init();
-});
+      let btn = 'КУП

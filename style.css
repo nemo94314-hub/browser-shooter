@@ -105,7 +105,6 @@ html, body { overflow: hidden; background: #000; color: #fff; touch-action: none
 #ammo .ico-hud { fill: #ffa502; }
 #medkits { bottom: 15px; left: 15px; color: #4ade80; }
 #medkits .ico-hud { fill: #4ade80; }
-/* НОВОЕ: счётчик гранат */
 #grenades { bottom: 45px; left: 15px; color: #7aff7a; }
 #grenades .ico-hud { fill: #7aff7a; }
 #crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 22px; color: #00ff88; text-shadow: 0 0 10px #00ff88; }
@@ -118,6 +117,49 @@ html, body { overflow: hidden; background: #000; color: #fff; touch-action: none
 #bossName .ico-hud { fill: #ff6600; width: 20px; height: 20px; }
 #bossHealthBar { height: 20px; background: rgba(0,0,0,0.7); border: 2px solid #ff6600; border-radius: 4px; overflow: hidden; }
 #bossHealthFill { height: 100%; background: linear-gradient(90deg, #ff6600, #ff0033); width: 100%; transition: width 0.3s; }
+
+/* ============ НОВОЕ: ПАНЕЛЬ ТУТОРИАЛА ============ */
+#tutorialHUD {
+  position: fixed;
+  top: 90px;
+  left: 15px;
+  background: rgba(0, 20, 40, 0.85);
+  border: 2px solid #00d4ff;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-family: 'Courier New', monospace;
+  color: #fff;
+  z-index: 55;
+  max-width: 340px;
+  pointer-events: none;
+  box-shadow: 0 0 25px rgba(0, 212, 255, 0.4);
+}
+.tut-title {
+  font-family: 'Impact', sans-serif;
+  color: #00d4ff;
+  font-size: 16px;
+  letter-spacing: 3px;
+  margin-bottom: 10px;
+  text-align: center;
+  border-bottom: 1px solid #00d4ff;
+  padding-bottom: 6px;
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.8);
+}
+.tut-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 4px 0;
+  color: #ccc;
+  transition: color 0.2s;
+}
+.tut-step.done {
+  color: #5aff5a;
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+.tut-check { font-size: 14px; }
 
 .complete-box { max-width: 500px; width: 100%; text-align: center; padding: 30px; background: rgba(10,0,0,0.95); border: 3px solid #00cc66; border-radius: 15px; box-shadow: 0 0 60px rgba(0,204,102,0.5); position: relative; z-index: 101; }
 .complete-box h1 { font-size: 36px; color: #00cc66; text-shadow: 0 0 25px rgba(0,204,102,0.9); margin-bottom: 25px; letter-spacing: 4px; }
@@ -140,7 +182,6 @@ html, body { overflow: hidden; background: #000; color: #fff; touch-action: none
 .mob-btn { width: 70px; height: 70px; border-radius: 50%; background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255, 255, 255, 0.7); color: #fff; cursor: pointer; pointer-events: auto; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; user-select: none; touch-action: manipulation; transition: transform 0.1s, background 0.15s; box-shadow: 0 0 15px rgba(255, 255, 255, 0.2); backdrop-filter: blur(6px); }
 .mob-btn .ico-btn { fill: #fff; width: 32px; height: 32px; }
 .mob-btn:active, .mob-btn.pressed { transform: scale(0.88); background: rgba(255, 255, 255, 0.55); border-color: #fff; box-shadow: 0 0 30px rgba(255, 255, 255, 0.9); }
-/* НОВОЕ: стиль для кнопки гранаты */
 .mob-btn.grenade { background: rgba(42, 90, 42, 0.4); border-color: #7aff7a; box-shadow: 0 0 15px rgba(122, 255, 122, 0.4); }
 .mob-btn.grenade .ico-btn { fill: #7aff7a; }
 .mob-btn.grenade:active, .mob-btn.grenade.pressed { background: rgba(42, 160, 42, 0.8); border-color: #aaffaa; box-shadow: 0 0 30px rgba(122, 255, 122, 1); }
@@ -166,6 +207,10 @@ html, body { overflow: hidden; background: #000; color: #fff; touch-action: none
   .shop-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .mob-btn { width: 60px; height: 60px; }
   .mob-btn .ico-btn { width: 28px; height: 28px; }
+  /* Мобильный туториал */
+  #tutorialHUD { top: 70px; left: 8px; right: 8px; max-width: none; padding: 10px 12px; }
+  .tut-title { font-size: 14px; letter-spacing: 2px; }
+  .tut-step { font-size: 11px; padding: 3px 0; }
 }
 @media (max-width: 500px) and (pointer: coarse) {
   #actionButtons { grid-template-columns: 60px 60px; grid-template-rows: 60px 60px 60px 60px; gap: 10px; }

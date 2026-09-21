@@ -1,9 +1,9 @@
 // ============ ZOMBIESHOOT v15.0 — game.js ============
 
-// ---------- ПРОГРЕСС ----------
 const DEFAULT_PROGRESS = {
   coins: 0,
   levels: {
+    0:{unlocked:true, completed:false, stars:0},
     1:{unlocked:true,completed:false,stars:0}, 2:{unlocked:false,completed:false,stars:0},
     3:{unlocked:false,completed:false,stars:0}, 4:{unlocked:false,completed:false,stars:0},
     5:{unlocked:false,completed:false,stars:0}, 6:{unlocked:false,completed:false,stars:0},
@@ -14,7 +14,6 @@ const DEFAULT_PROGRESS = {
   currentSkin: 'default',
   upgrades: { damage:0, reload:0, health:0 }
 };
-
 let PROGRESS = loadProgress();
 function loadProgress() {
   try {
@@ -26,6 +25,7 @@ function loadProgress() {
       if (!merged.upgrades) merged.upgrades = { damage:0, reload:0, health:0 };
       if (!merged.ownedWeapons) merged.ownedWeapons = ['pistol','rifle','shotgun'];
       if (!merged.ownedSkins) merged.ownedSkins = ['default'];
+      if (!merged.levels[0]) merged.levels[0] = {unlocked:true, completed:false, stars:0};
       return merged;
     }
   } catch(e){}
@@ -37,8 +37,8 @@ function resetProgress(){
   saveProgress(); updateCoinsDisplay(); renderLevelGrid();
 }
 
-// ---------- КОНСТАНТЫ ----------
 const LEVELS = {
+  0:{name:'Тренировка',icon:'🎓',waves:1,boss:false,maxEnemies:3,enemySpeed:0.8,enemyHealth:50,enemyDamage:0,shooterChance:0,grenadierChance:0,theme:'grass',sky:0x87a5c4,fog:0x87a5c4,fogNear:50,fogFar:130,ambient:0.9,isTutorial:true,daylight:true},
   1:{name:'Лагерь',icon:'⛺',waves:1,boss:false,maxEnemies:5,enemySpeed:1.2,enemyHealth:30,enemyDamage:0.5,shooterChance:0.3,grenadierChance:0.05,theme:'grass',sky:0x0a0a1a,fog:0x050510,fogNear:8,fogFar:40,ambient:0.08},
   2:{name:'Лес',icon:'🌲',waves:2,boss:false,maxEnemies:7,enemySpeed:1.4,enemyHealth:45,enemyDamage:0.6,shooterChance:0.4,grenadierChance:0.10,theme:'forest',sky:0x050a05,fog:0x030803,fogNear:6,fogFar:35,ambient:0.06},
   3:{name:'Деревня',icon:'🏘️',waves:3,boss:false,maxEnemies:9,enemySpeed:1.6,enemyHealth:60,enemyDamage:0.7,shooterChance:0.5,grenadierChance:0.15,theme:'village',sky:0x1a0a05,fog:0x0a0503,fogNear:7,fogFar:38,ambient:0.07},
@@ -72,17 +72,60 @@ const SKINS = {
   ghost:    {name:'Призрак',   body:0x666666,head:0x999999,cost:1000}
 };
 
+// ============ ТУТОРИАЛ ============
+const TUTORIAL_STEPS = [
+  {id:'move',   text:'Двигайся: W A S D (или джойстик)', key:'WASD',    done:false},
+  {id:'look',   text:'Осмотрись: мышь (свайп справа)',   key:'МЫШЬ',    done:false},
+  {id:'shoot',  text:'Стреляй по красным мишеням: ЛКМ',  key:'ЛКМ',     done:false},
+  {id:'reload', text:'Перезарядись: R',                   key:'R',       done:false},
+  {id:'grenade',text:'Брось гранату: G (или ПКМ)',        key:'G',       done:false},
+  {id:'pickup', text:'Подойди к ящику и нажми E',         key:'E',       done:false},
+  {id:'kill',   text:'Уничтожь 3 мишени',                 key:'ЦЕЛЬ',    done:false}
+];
+let tutorialState = null;
+
+function initTutorial(){
+  tutorialState = {
+    steps: TUTORIAL_STEPS.map(s => ({...s})),
+    moved: false,
+    looked: false,
+    shot: false,
+    reloaded: false,
+    grenade: false,
+    picked: false,
+    targetsKilled: 0,
+    damageTaken: 0,
+    startTime: performance.now()
+  };
+}
+function tutStep(id){ return tutorialState?.steps.find(s => s.id === id); }
+function markTutStep(id){
+  const s = tutStep(id);
+  if (s && !s.done){ s.done = true; updateTutorialHUD(); }
+}
+function updateTutorialHUD(){
+  const el = document.getElementById('tutorialHUD');
+  if (!el || !tutorialState) return;
+  const list = tutorialState.steps.map(s => 
+    `<div class="tut-step ${s.done ? 'done' : ''}">
+      <span class="tut-check">${s.done ? '✅' : '⬜'}</span>
+      <span class="tut-text">${s.text}</span>
+    </div>`
+  ).join('');
+  el.innerHTML = `<div class="tut-title">🎓 ТРЕНИРОВКА</div>${list}`;
+}
+
+// ============ АПГРЕЙДЫ ============
 const UPGRADES = {
   damage:{name:'Урон',icon:'💥',desc:'+10% урона за уровень',maxLevel:5,costs:[200,400,600,800,1000]},
   reload:{name:'Скорость перезарядки',icon:'⚡',desc:'−10% времени перезарядки',maxLevel:5,costs:[150,300,450,600,750]},
   health:{name:'Здоровье',icon:'❤️',desc:'+20 к максимальному HP',maxLevel:5,costs:[250,500,750,1000,1250]}
 };
-
 function getDamageMultiplier(){ return 1 + 0.1 * (PROGRESS.upgrades?.damage || 0); }
 function getReloadMultiplier(){ return Math.max(0.5, 1 - 0.1 * (PROGRESS.upgrades?.reload || 0)); }
 function getMaxHealth(){ return 100 + 20 * (PROGRESS.upgrades?.health || 0); }
 
-// ---------- СОСТОЯНИЕ ----------
+// ============ СОСТОЯНИЕ ============
 let scene, camera, renderer, composer;
 let score = 0, health = 100, wave = 1, currentLevel = 1;
 let hitsTaken = 0;
@@ -98,25 +141,22 @@ const GRAVITY = 22, JUMP_POWER = 8;
 let MOUSE_SENSITIVITY = 0.002, volume = 0.4, medkits = 2;
 let horrorMode = true;
 let survivalMode = null;
-
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in window && window.innerWidth < 1200);
 let joystickActive = false, joystickTouchId = null;
 let joystickStartX = 0, joystickStartY = 0, joystickDeltaX = 0, joystickDeltaY = 0;
 let lookTouchId = null, lookLastX = 0, lookLastY = 0;
-
 let currentWeapon = 'rifle';
 let reloading = false, lastShotTime = 0, isMouseDown = false;
 let weaponGroup = null, flashlight = null, audioCtx = null;
 let nearLootCrate = null;
 let filmPass = null, vignettePass = null;
 const keys = { w:false, a:false, s:false, d:false };
-
 let activeAmbientNodes = [];
 let footstepTimer = 0, lastFootstepTime = 0;
 let waveSpawnTimer = null;
 let musicState = { calmGain:null, combatGain:null, calmOsc:null, combatOsc:null, bassGain:null, intensity:0, running:false };
 
-// ---------- ЗВУК ----------
+// ============ ЗВУК ============
 function playClickSound(freq, dur){
   if (!audioCtx) return;
   const o = audioCtx.createOscillator(), g = audioCtx.createGain();
@@ -302,6 +342,7 @@ function playFootstepSound(){
 function startHorrorAmbient(){
   if (!audioCtx) return;
   stopHorrorAmbient();
+  if (currentLevel === 0) return; // в туториале тихо
   const drone = audioCtx.createOscillator(), dg = audioCtx.createGain(), df = audioCtx.createBiquadFilter();
   drone.type = 'sine'; drone.frequency.setValueAtTime(45, audioCtx.currentTime);
   df.type = 'lowpass'; df.frequency.setValueAtTime(150, audioCtx.currentTime);
@@ -327,7 +368,6 @@ function startDynamicMusic(){
   calmFilter.type = 'lowpass'; calmFilter.frequency.setValueAtTime(200, audioCtx.currentTime);
   calmOsc.connect(calmFilter); calmFilter.connect(calmGain);
   calmOsc.start();
-
   const combatGain = audioCtx.createGain();
   combatGain.gain.setValueAtTime(0, audioCtx.currentTime);
   combatGain.connect(audioCtx.destination);
@@ -339,7 +379,6 @@ function startDynamicMusic(){
   bassGain.gain.setValueAtTime(0, audioCtx.currentTime);
   combatOsc.connect(cf); cf.connect(bassGain); bassGain.connect(combatGain);
   combatOsc.start();
-
   function beat(){
     if (!musicState.running) return;
     const t = audioCtx.currentTime;
@@ -369,6 +408,7 @@ function updateMusicIntensity(){
   if (!audioCtx || !musicState.running || !isGameActive) return;
   let maxThreat = 0;
   for (const e of enemies){
+    if (e.userData.isTarget) continue;
     const d = e.position.distanceTo(camera.position);
     if (d < 30){
       const t = (1 - d/30) * (e.userData.isBoss ? 1.5 : 1);
@@ -383,7 +423,7 @@ function updateMusicIntensity(){
   }catch(e){}
 }
 
-// ---------- ЧАСТИЦЫ ----------
+// ============ ЧАСТИЦЫ ============
 function spawnParticle(pos, velocity, color, size, life, useGravity = true){
   const m = new THREE.Mesh(
     new THREE.SphereGeometry(size, 4, 4),
@@ -460,17 +500,15 @@ function updateParticles(delta){
   }
 }
 
-// ---------- ИНИЦИАЛИЗАЦИЯ ----------
+// ============ ИНИЦИАЛИЗАЦИЯ ============
 function init(){
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x050510);
   scene.fog = new THREE.Fog(0x050510, 8, 40);
-
   const fov = isMobile ? 85 : 75;
   camera = new THREE.PerspectiveCamera(fov, innerWidth / innerHeight, 0.1, 300);
   camera.position.set(0, playerY, 0);
   scene.add(camera);
-
   renderer = new THREE.WebGLRenderer({antialias: !isMobile, powerPreference:'high-performance'});
   renderer.setSize(innerWidth, innerHeight);
   renderer.setPixelRatio(isMobile ? 1 : Math.min(devicePixelRatio, 2));
@@ -482,34 +520,12 @@ function init(){
   renderer.domElement.style.zIndex = '20';
   document.body.appendChild(renderer.domElement);
   renderer.domElement.style.display = 'none';
-
   try{
     const hm = localStorage.getItem('zombieshoot_horror');
     if (hm !== null) horrorMode = hm === 'true';
   }catch(e){}
-
-  if (horrorMode && typeof THREE.EffectComposer !== 'undefined'){
-    try{
-      composer = new THREE.EffectComposer(renderer);
-      composer.addPass(new THREE.RenderPass(scene, camera));
-      if (THREE.FilmShader){
-        filmPass = new THREE.ShaderPass(THREE.FilmShader);
-        filmPass.uniforms['nIntensity'].value = 0.15;
-        composer.addPass(filmPass);
-      }
-      if (THREE.VignetteShader){
-        vignettePass = new THREE.ShaderPass(THREE.VignetteShader);
-        vignettePass.uniforms['darkness'].value = 1.4;
-        vignettePass.renderToScreen = true;
-        composer.addPass(vignettePass);
-      }
-    }catch(e){ composer = null; }
-  }
-
   buildLevelEnvironment(1);
-
   try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){}
-
   setupControls();
   initUI();
   initMobileControls();
@@ -518,7 +534,7 @@ function init(){
   animate();
 }
 
-// ---------- ОКРУЖЕНИЕ ----------
+// ============ ОКРУЖЕНИЕ ============
 function clearLevelEnvironment(){
   for (let i = scene.children.length - 1; i >= 0; i--){
     const c = scene.children[i];
@@ -531,8 +547,13 @@ function clearLevelEnvironment(){
 function buildLevelEnvironment(levelNum){
   clearLevelEnvironment();
   const lvl = LEVELS[levelNum] || LEVELS[1];
+  const isTutorial = !!lvl.isTutorial;
   let skyColor, fogColor, fogNear, fogFar, ambientLevel;
-  if (horrorMode){
+  if (isTutorial){
+    // Дневная яркая локация
+    skyColor = 0x8ec8e8; fogColor = 0x9ed4e8;
+    fogNear = 60; fogFar = 160; ambientLevel = 1.0;
+  } else if (horrorMode){
     skyColor = lvl.sky; fogColor = lvl.fog;
     fogNear = lvl.fogNear; fogFar = lvl.fogFar;
     ambientLevel = lvl.ambient || 0.08;
@@ -547,26 +568,43 @@ function buildLevelEnvironment(levelNum){
     new THREE.SphereGeometry(150, 32, 16),
     new THREE.MeshBasicMaterial({color: skyColor, side: THREE.BackSide, fog:false})
   ));
-  scene.add(new THREE.AmbientLight(0xffffff, ambientLevel));
-  if (horrorMode){
-    const moon = new THREE.DirectionalLight(0x8899cc, 0.25);
-    moon.position.set(-30, 40, -20); scene.add(moon);
+
+  if (isTutorial){
+    // Тёплый солнечный свет
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const sun = new THREE.DirectionalLight(0xfff4d0, 1.2);
+    sun.position.set(30, 60, 20);
+    sun.castShadow = !isMobile;
+    sun.shadow.mapSize.width = 2048;
+    sun.shadow.mapSize.height = 2048;
+    scene.add(sun);
+    const hemi = new THREE.HemisphereLight(0x8ec8e8, 0x6a8a5a, 0.6);
+    scene.add(hemi);
   } else {
-    const sun = new THREE.DirectionalLight(0xfff0d0, 0.8);
-    sun.position.set(40, 60, 20); sun.castShadow = !isMobile; scene.add(sun);
+    scene.add(new THREE.AmbientLight(0xffffff, ambientLevel));
+    if (horrorMode){
+      const moon = new THREE.DirectionalLight(0x8899cc, 0.25);
+      moon.position.set(-30, 40, -20); scene.add(moon);
+    } else {
+      const sun = new THREE.DirectionalLight(0xfff0d0, 0.8);
+      sun.position.set(40, 60, 20); sun.castShadow = !isMobile; scene.add(sun);
+    }
   }
-  const gc = horrorMode
-    ? {grass:0x1a2a15,forest:0x0a1a0a,village:0x2a1a0a,desert:0x4a3a1a,factory:0x1a1a1a,metro:0x0a0a0a,lab:0x0a1a15,lair:0x1a0000}
-    : {grass:0x4a6b3a,forest:0x3a5a2a,village:0x6a5a3a,desert:0xc4a868,factory:0x5a5a5a,metro:0x3a3a3e,lab:0x4a6a5a,lair:0x5a2a2a};
+
+  const gc = isTutorial
+    ? 0x6a9a4a
+    : (horrorMode
+      ? {grass:0x1a2a15,forest:0x0a1a0a,village:0x2a1a0a,desert:0x4a3a1a,factory:0x1a1a1a,metro:0x0a0a0a,lab:0x0a1a15,lair:0x1a0000}
+      : {grass:0x4a6b3a,forest:0x3a5a2a,village:0x6a5a3a,desert:0xc4a868,factory:0x5a5a5a,metro:0x3a3a3e,lab:0x4a6a5a,lair:0x5a2a2a})[lvl.theme];
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(100, 100, 20, 20),
-    new THREE.MeshStandardMaterial({color: gc[lvl.theme] || 0x4a6b3a, roughness:1})
+    new THREE.MeshStandardMaterial({color: gc || 0x4a6b3a, roughness:1})
   );
   ground.rotation.x = -Math.PI/2;
   ground.receiveShadow = true;
   scene.add(ground);
 
-  const wallMat = new THREE.MeshStandardMaterial({color: horrorMode ? 0x1a1a1a : 0x5a5a5a, roughness:1});
+  const wallMat = new THREE.MeshStandardMaterial({color: isTutorial ? 0x8a7a5a : (horrorMode ? 0x1a1a1a : 0x5a5a5a), roughness:1});
   [
     {pos:[0,5,-48],size:[96,10,1]}, {pos:[0,5,48],size:[96,10,1]},
     {pos:[-48,5,0],size:[1,10,96]}, {pos:[48,5,0],size:[1,10,96]}
@@ -578,7 +616,7 @@ function buildLevelEnvironment(levelNum){
     scene.add(wall); obstacles.push(wall);
   });
 
-  const obsMat = new THREE.MeshStandardMaterial({color: horrorMode ? 0x3a2a1a : 0x6a552a, roughness:1});
+  const obsMat = new THREE.MeshStandardMaterial({color: isTutorial ? 0x8a6a3a : (horrorMode ? 0x3a2a1a : 0x6a552a), roughness:1});
   [[12,1,8,3,2,3],[-12,1,8,3,2,3],[12,1,-8,3,2,3],[-12,1,-8,3,2,3]].forEach(([x,y,z,sx,sy,sz]) => {
     const c = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), obsMat);
     c.position.set(x, y, z);
@@ -587,7 +625,45 @@ function buildLevelEnvironment(levelNum){
     scene.add(c); obstacles.push(c);
   });
 
-  if (horrorMode){
+  // Мишени для туториала
+  if (isTutorial){
+    for (let i = 0; i < 3; i++){
+      const dummy = new THREE.Group();
+      const bodyMat = new THREE.MeshStandardMaterial({color:0xcc4444});
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.4, 0.35), bodyMat);
+      body.position.y = 0.7; body.castShadow = true; dummy.add(body);
+      const headMat = new THREE.MeshStandardMaterial({color:0xff6666});
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 10), headMat);
+      head.position.y = 1.65; head.castShadow = true;
+      head.userData.isHead = true; dummy.add(head);
+      const base = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.4, 0.5, 0.15, 8),
+        new THREE.MeshStandardMaterial({color:0x444444})
+      );
+      base.position.y = 0.07; dummy.add(base);
+      dummy.position.set(-4 + i * 4, 0, -8);
+      dummy.userData = {
+        isTarget: true,
+        health: 80, maxHealth: 80,
+        type: 'target',
+        isBoss: false,
+        spawnIndex: i
+      };
+      scene.add(dummy);
+      enemies.push(dummy);
+    }
+    // Один ящик с лутом посреди карты
+    const crate = new THREE.Mesh(
+      new THREE.BoxGeometry(0.6, 0.6, 0.6),
+      new THREE.MeshStandardMaterial({color:0x3a6aaa, metalness:0.5, roughness:0.4})
+    );
+    crate.position.set(0, 0.3, 4);
+    crate.userData = {weapon:'rifle', isTutorialCrate: true};
+    scene.add(crate);
+    lootCrates.push(crate);
+  }
+
+  if (horrorMode && !isTutorial){
     flashlight = new THREE.SpotLight(0xfff2d0, 1.5, 25, Math.PI/7, 0.4, 1.5);
     flashlight.position.set(0,0,0);
     flashlight.target.position.set(0,0,-1);
@@ -596,13 +672,12 @@ function buildLevelEnvironment(levelNum){
   } else flashlight = null;
 }
 
-// ---------- ОРУЖИЕ ----------
+// ============ ОРУЖИЕ ============
 function createWeapon(type){
   if (weaponGroup) camera.remove(weaponGroup);
   weaponGroup = new THREE.Group();
   const metal = new THREE.MeshStandardMaterial({color:0x1a1a1a, metalness:0.9, roughness:0.4});
   const grip = new THREE.MeshStandardMaterial({color:0x0a0a0a});
-
   if (type === 'pistol'){
     const s = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.09, 0.28), metal);
     s.position.set(0, 0.02, -0.15); weaponGroup.add(s);
@@ -634,53 +709,44 @@ function createWeapon(type){
   camera.add(weaponGroup);
 }
 
-// ---------- ЗОМБИ ----------
+// ============ ЗОМБИ ============
 function createZombie(isBoss, type = 'melee'){
   const g = new THREE.Group();
   const sk = SKINS[PROGRESS.currentSkin] || SKINS.default;
   const size = isBoss ? 1.8 : 1;
-
   let bodyColor, headColor, eyeColor;
   if (isBoss){ bodyColor = 0x4a1a1a; headColor = 0x6a2a2a; eyeColor = 0xff6600; }
   else if (type === 'shooter'){ bodyColor = 0x2a2a3a; headColor = 0x5a5a3a; eyeColor = 0xffcc00; }
   else if (type === 'grenadier'){ bodyColor = 0x2a4a2a; headColor = 0x3a5a3a; eyeColor = 0x00ff66; }
   else { bodyColor = sk.body; headColor = 0x5a6a3a; eyeColor = 0xaa0000; }
-
   const skinMat = new THREE.MeshStandardMaterial({color: headColor});
   const uniform = new THREE.MeshStandardMaterial({color: bodyColor});
   const dark = new THREE.MeshStandardMaterial({color: 0x1a1a1a});
   const glow = new THREE.MeshBasicMaterial({color: eyeColor});
-
   const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.35*size, 0.32*size, 1.0*size, 8), uniform);
   torso.position.y = 0.5*size; torso.castShadow = true; g.add(torso);
-
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.28*size, 12, 10), skinMat);
   head.position.y = 1.45*size; head.castShadow = true; g.add(head);
   head.userData.isHead = true;
-
   const eL = new THREE.Mesh(new THREE.SphereGeometry(0.055*size, 6, 6), glow);
   eL.position.set(-0.11*size, 1.48*size, -0.24*size); g.add(eL);
   const eR = new THREE.Mesh(new THREE.SphereGeometry(0.055*size, 6, 6), glow);
   eR.position.set(0.11*size, 1.48*size, -0.24*size); g.add(eR);
-
   const legGeo = new THREE.CylinderGeometry(0.13*size, 0.11*size, 0.75*size, 6);
   const lL = new THREE.Mesh(legGeo, dark);
   lL.position.set(-0.18*size, -0.4*size, 0); g.add(lL);
   const lR = new THREE.Mesh(legGeo, dark);
   lR.position.set(0.18*size, -0.4*size, 0); g.add(lR);
-
   if (!isBoss){
     if (type === 'shooter'){
       const gunMat = new THREE.MeshStandardMaterial({color:0x111111, metalness:0.9, roughness:0.3});
       const rifle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.1, 0.7), gunMat);
       rifle.position.set(0.35*size, 0.9*size, -0.35*size);
-      rifle.rotation.z = -0.15;
-      g.add(rifle);
+      rifle.rotation.z = -0.15; g.add(rifle);
     } else if (type === 'grenadier'){
       const bag = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.2),
         new THREE.MeshStandardMaterial({color:0x4a6a3a}));
-      bag.position.set(0, 0.5*size, 0.35*size);
-      g.add(bag);
+      bag.position.set(0, 0.5*size, 0.35*size); g.add(bag);
     }
   } else {
     const hornMat = new THREE.MeshStandardMaterial({color:0xaa8866});
@@ -690,19 +756,18 @@ function createZombie(isBoss, type = 'melee'){
     hr.position.set(0.2*size, 1.75*size, 0); hr.rotation.z = -0.5; g.add(hr);
     const aura = new THREE.PointLight(0xff3300, 1.5, 8);
     aura.position.y = 1.2*size;
-    aura.userData.isBossAura = true;
-    g.add(aura);
+    aura.userData.isBossAura = true; g.add(aura);
   }
   g.position.y = 0.9*size;
   return g;
 }
 
-// ---------- СПАВН ----------
+// ============ СПАВН ============
 function spawnEnemy(isBoss = false, forcedType = null){
   if (!isGameActive) return;
   const lvl = LEVELS[currentLevel] || LEVELS[1];
+  if (lvl.isTutorial) return; // в туториале врагов нет
   if (!isBoss && enemies.length >= lvl.maxEnemies) return;
-
   let type = 'melee';
   if (!isBoss){
     if (forcedType) type = forcedType;
@@ -712,13 +777,11 @@ function spawnEnemy(isBoss = false, forcedType = null){
       else if (r < lvl.shooterChance + lvl.grenadierChance) type = 'grenadier';
     }
   }
-
   const e = createZombie(isBoss, type);
   const range = isBoss ? 20 : 45;
   const sides = [[-range,0],[range,0],[0,-range],[0,range],[-range,-range],[-range,range],[range,-range],[range,range]];
   const s = sides[Math.floor(Math.random() * sides.length)];
   e.position.set(s[0] + (Math.random()-0.5)*3, 0.9*(isBoss?1.8:1), s[1] + (Math.random()-0.5)*3);
-
   const baseHealth = isBoss ? 2000 : lvl.enemyHealth;
   e.userData = {
     type, isBoss: !!isBoss,
@@ -745,7 +808,6 @@ function spawnEnemy(isBoss = false, forcedType = null){
   }
 }
 
-// ---------- ФАЗЫ БОССА ----------
 function checkBossPhase(){
   if (!currentBoss || !currentBoss.userData) return;
   const ratio = currentBoss.userData.health / currentBoss.userData.maxHealth;
@@ -774,14 +836,12 @@ function checkBossPhase(){
   }
 }
 
-// ---------- ИГРОВОЙ ФЛОУ ----------
+// ============ ИГРОВОЙ ФЛОУ ============
 function startGame(level = 1, survival = null){
   currentLevel = level;
   survivalMode = survival;
-
   score = 0; health = getMaxHealth(); wave = 1;
   hitsTaken = 0; medkits = 2; playerGrenades = 3; bossPhase = 1;
-
   enemies.forEach(e => scene.remove(e)); enemies = [];
   enemyBullets.forEach(b => scene.remove(b)); enemyBullets = [];
   grenades.forEach(g => scene.remove(g)); grenades = [];
@@ -789,7 +849,6 @@ function startGame(level = 1, survival = null){
   corpses.forEach(c => scene.remove(c)); corpses = [];
   bloodStains.forEach(b => scene.remove(b)); bloodStains = [];
   particles.forEach(p => scene.remove(p)); particles = [];
-
   currentBoss = null; bossMaxHealth = 0;
   isGameActive = true;
   reloading = false; lastShotTime = 0; isMouseDown = false;
@@ -805,29 +864,36 @@ function startGame(level = 1, survival = null){
   document.getElementById('hud').style.display = 'block';
   renderer.domElement.style.display = 'block';
 
+  // Туториал или обычная игра
+  if (LEVELS[level]?.isTutorial){
+    initTutorial();
+    document.getElementById('tutorialHUD').style.display = 'block';
+    updateTutorialHUD();
+    showToast('🎓 Добро пожаловать в тренировку!', 3000);
+  } else {
+    tutorialState = null;
+    document.getElementById('tutorialHUD').style.display = 'none';
+    startWave();
+  }
+
   updateHUD();
-  showToast(survival ? `Режим: ${survival.name}` : `Уровень ${level}: ${LEVELS[level].name}`, 2000);
   startHorrorAmbient();
   startDynamicMusic();
-  startWave();
 
-  // На ПК — сразу запросить pointer lock по клику
   if (!isMobile){
-    setTimeout(() => {
-      if (renderer.domElement.requestPointerLock) renderer.domElement.requestPointerLock();
-    }, 100);
+    setTimeout(() => { if (renderer.domElement.requestPointerLock) renderer.domElement.requestPointerLock(); }, 100);
   }
 }
 
 function startWave(){
   const lvl = LEVELS[currentLevel] || LEVELS[1];
+  if (lvl.isTutorial) return;
   const mode = survivalMode;
   const maxEnemies = mode ? mode.maxEnemies : lvl.maxEnemies;
   const spawnInterval = mode ? mode.spawnInterval : 3000;
   let waveEnemiesRemaining = mode ? 10 + wave * 3 : 5 + wave * 2;
   showToast(`Волна ${wave}`, 1500);
   updateHUD();
-
   if (waveSpawnTimer) clearInterval(waveSpawnTimer);
   waveSpawnTimer = setInterval(() => {
     if (!isGameActive) return;
@@ -841,13 +907,13 @@ function startWave(){
     spawnEnemy(false);
     waveEnemiesRemaining--;
   }, spawnInterval);
-
   if (lvl.boss && wave === lvl.waves && !currentBoss){
     setTimeout(() => { if (isGameActive && !currentBoss) spawnEnemy(true); }, 3000);
   }
 }
 
 function checkWaveComplete(){
+  if (LEVELS[currentLevel]?.isTutorial) return;
   const alive = enemies.filter(e => e.userData.health > 0).length;
   if (alive === 0){
     const lvl = LEVELS[currentLevel] || LEVELS[1];
@@ -857,12 +923,51 @@ function checkWaveComplete(){
   }
 }
 
+function completeTutorial(){
+  if (!tutorialState) return;
+  isGameActive = false;
+  stopHorrorAmbient();
+  stopDynamicMusic();
+  if (document.pointerLockElement) document.exitPointerLock();
+
+  const doneSteps = tutorialState.steps.filter(s => s.done).length;
+  let stars = 0;
+  if (doneSteps >= 7 && tutorialState.damageTaken === 0) stars = 3;
+  else if (doneSteps >= 7) stars = 2;
+  else if (doneSteps >= 5) stars = 1;
+
+  const coinsEarned = [50, 100, 200, 300][stars];
+  PROGRESS.coins += coinsEarned;
+  PROGRESS.levels[0].completed = true;
+  PROGRESS.levels[0].stars = Math.max(PROGRESS.levels[0].stars, stars);
+
+  // Бонус за звёзды — открываем уровни
+  if (stars >= 2 && PROGRESS.levels[2]) PROGRESS.levels[2].unlocked = true;
+  if (stars >= 3 && PROGRESS.levels[3]) PROGRESS.levels[3].unlocked = true;
+
+  saveProgress();
+  updateCoinsDisplay();
+  renderLevelGrid();
+
+  document.getElementById('hud').style.display = 'none';
+  document.getElementById('tutorialHUD').style.display = 'none';
+  renderer.domElement.style.display = 'none';
+  for (let i = 1; i <= 3; i++){
+    const s = document.getElementById('star' + i);
+    if (s) s.classList.toggle('active', i <= stars);
+  }
+  const c = document.getElementById('coinsEarned');
+  if (c) c.textContent = coinsEarned;
+  const h1 = document.querySelector('#levelComplete h1');
+  if (h1) h1.textContent = stars >= 3 ? '🎓 ОТЛИЧНО!' : stars >= 2 ? '🎓 ХОРОШО!' : '🎓 ТРЕНИРОВКА ПРОЙДЕНА';
+  document.getElementById('levelComplete').style.display = 'flex';
+}
+
 function completeLevel(){
   isGameActive = false;
   if (waveSpawnTimer) clearInterval(waveSpawnTimer);
   stopHorrorAmbient();
   stopDynamicMusic();
-
   const stars = health > getMaxHealth()*0.75 ? 3 : health > getMaxHealth()*0.4 ? 2 : 1;
   const coinsEarned = Math.floor(score/10) + stars * 50;
   PROGRESS.coins += coinsEarned;
@@ -871,9 +976,7 @@ function completeLevel(){
   if (PROGRESS.levels[currentLevel + 1]) PROGRESS.levels[currentLevel + 1].unlocked = true;
   saveProgress();
   updateCoinsDisplay();
-
   if (document.pointerLockElement) document.exitPointerLock();
-
   setTimeout(() => {
     document.getElementById('hud').style.display = 'none';
     renderer.domElement.style.display = 'none';
@@ -883,6 +986,8 @@ function completeLevel(){
     }
     const c = document.getElementById('coinsEarned');
     if (c) c.textContent = coinsEarned;
+    const h1 = document.querySelector('#levelComplete h1');
+    if (h1) h1.textContent = 'УРОВЕНЬ ПРОЙДЕН!';
     document.getElementById('levelComplete').style.display = 'flex';
   }, 1500);
 }
@@ -896,6 +1001,7 @@ function gameOver(){
   if (document.pointerLockElement) document.exitPointerLock();
   setTimeout(() => {
     document.getElementById('hud').style.display = 'none';
+    document.getElementById('tutorialHUD').style.display = 'none';
     renderer.domElement.style.display = 'none';
     const dl = document.getElementById('deadLevel');
     if (dl) dl.textContent = currentLevel;
@@ -903,18 +1009,41 @@ function gameOver(){
   }, 1800);
 }
 
-// ---------- ОБНОВЛЕНИЕ ВРАГОВ ----------
+// ============ ОБНОВЛЕНИЕ ВРАГОВ ============
 function updateEnemies(delta){
   if (!isGameActive) return;
   const now = performance.now();
   const playerPos = camera.position;
-
   if (currentBoss) checkBossPhase();
-
   for (let i = enemies.length - 1; i >= 0; i--){
     const e = enemies[i];
     const ud = e.userData;
     if (ud.health <= 0){
+      // Мишень — просто удалить
+      if (ud.isTarget){
+        scene.remove(e);
+        enemies.splice(i, 1);
+        if (tutorialState){
+          tutorialState.targetsKilled++;
+          if (tutorialState.targetsKilled >= 3) markTutStep('kill');
+          // Спавн новой мишени, чтобы всегда было 3
+          setTimeout(() => {
+            if (!isGameActive || currentLevel !== 0) return;
+            const dummy = new THREE.Group();
+            const bodyMat = new THREE.MeshStandardMaterial({color:0xcc4444});
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.4, 0.35), bodyMat);
+            body.position.y = 0.7; body.castShadow = true; dummy.add(body);
+            const headMat = new THREE.MeshStandardMaterial({color:0xff6666});
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 10), headMat);
+            head.position.y = 1.65; head.castShadow = true;
+            head.userData.isHead = true; dummy.add(head);
+            dummy.position.set((Math.random()-0.5)*20, 0, -5 - Math.random()*8);
+            dummy.userData = {isTarget:true, health:80, maxHealth:80, type:'target', isBoss:false};
+            scene.add(dummy); enemies.push(dummy);
+          }, 500);
+        }
+        continue;
+      }
       createCorpse(e);
       if (ud.isBoss){
         currentBoss = null;
@@ -931,6 +1060,8 @@ function updateEnemies(delta){
       checkWaveComplete();
       continue;
     }
+    // Мишень не двигается и не атакует
+    if (ud.isTarget) continue;
 
     const dir = new THREE.Vector3().subVectors(playerPos, e.position);
     dir.y = 0;
@@ -950,19 +1081,16 @@ function updateEnemies(delta){
       e.position.copy(newPos);
       e.lookAt(playerPos.x, e.position.y, playerPos.z);
     }
-
     ud.walkPhase += delta * 6;
     e.children.forEach((ch, idx) => {
       if (ch.geometry && ch.geometry.type === 'CylinderGeometry' && idx >= 4 && idx <= 7){
         ch.rotation.x = Math.sin(ud.walkPhase) * 0.4;
       }
     });
-
     if (now > ud.nextGroan){
       playZombieGroan(e.position);
       ud.nextGroan = now + 3000 + Math.random() * 5000;
     }
-
     if (dist < (ud.isBoss ? 2.5 : 1.5)){
       if (now - ud.lastShot > 1000){
         ud.lastShot = now;
@@ -970,7 +1098,6 @@ function updateEnemies(delta){
         takeDamage(dmg);
       }
     }
-
     if (ud.isBoss){
       if (ud.phase >= 2 && now > ud.nextSummonTime){
         ud.nextSummonTime = now + 10000;
@@ -1022,7 +1149,6 @@ function throwGrenade(e, target){
   g.userData = {velocity: dir.multiplyScalar(12).add(new THREE.Vector3(0,5,0)), life:2.5, damage:40, radius:6, isPlayer:false};
   scene.add(g); grenades.push(g);
 }
-
 function throwPlayerGrenade(){
   if (!isGameActive || playerGrenades <= 0) return;
   playerGrenades--;
@@ -1039,6 +1165,7 @@ function throwPlayerGrenade(){
   scene.add(g); grenades.push(g);
   playClickSound(300, 0.05);
   updateHUD();
+  if (tutorialState) markTutStep('grenade');
 }
 
 function updateBullets(delta){
@@ -1066,13 +1193,13 @@ function updateBullets(delta){
     }
   }
 }
-
 function explodeGrenade(pos, damage, radius, isPlayer){
   playExplosionSound(pos);
   if (!isPlayer && pos.distanceTo(camera.position) < radius){
     takeDamage(damage * (1 - pos.distanceTo(camera.position)/radius));
   }
   enemies.forEach(e => {
+    if (e.userData.isTarget) return; // не убиваем мишени гранатой (для простоты)
     const d = pos.distanceTo(e.position);
     if (d < radius) e.userData.health -= damage * (1 - d/radius);
   });
@@ -1085,18 +1212,16 @@ function explodeGrenade(pos, damage, radius, isPlayer){
   }
 }
 
-// ---------- УРОН ----------
+// ============ УРОН ============
 function takeDamage(amount){
   if (!isGameActive) return;
   health -= amount;
   hitsTaken++;
+  if (tutorialState) tutorialState.damageTaken += amount;
   shakeAmount = Math.min(1, shakeAmount + 0.3);
   playHurtSoundEnhanced();
   const vig = document.getElementById('damageVignette');
-  if (vig){
-    vig.style.opacity = '1';
-    setTimeout(() => vig.style.opacity = '0', 200);
-  }
+  if (vig){ vig.style.opacity = '1'; setTimeout(() => vig.style.opacity = '0', 200); }
   updateHUD();
   if (health <= 0){ health = 0; gameOver(); }
 }
@@ -1112,7 +1237,7 @@ function useMedkit(){
 function addScore(p){ score += p; updateHUD(); }
 function addCoins(a){ PROGRESS.coins += a; saveProgress(); updateCoinsDisplay(); }
 
-// ---------- ЛУТ ----------
+// ============ ЛУТ ============
 function createLootCrate(pos, weaponKey){
   const c = new THREE.Mesh(
     new THREE.BoxGeometry(0.6, 0.6, 0.6),
@@ -1135,12 +1260,14 @@ function pickupLoot(){
   if (!nearLootCrate) return;
   const w = nearLootCrate.userData.weapon;
   if (WEAPONS[w]){ WEAPONS[w].ammo = WEAPONS[w].maxAmmo; playPickupSound(); addScore(50); }
+  const wasTut = nearLootCrate.userData.isTutorialCrate;
   scene.remove(nearLootCrate);
   lootCrates = lootCrates.filter(c => c !== nearLootCrate);
   nearLootCrate = null; updateHUD();
+  if (wasTut && tutorialState) markTutStep('pickup');
 }
 
-// ---------- ТРУПЫ ----------
+// ============ ТРУПЫ ============
 function createCorpse(enemy){
   const c = enemy.clone();
   c.rotation.x = Math.PI/2; c.position.y = 0.1;
@@ -1157,7 +1284,7 @@ function createCorpse(enemy){
   setTimeout(() => { scene.remove(stain); bloodStains = bloodStains.filter(s => s !== stain); }, 15000);
 }
 
-// ---------- СТРЕЛЬБА ----------
+// ============ СТРЕЛЬБА ============
 function shoot(){
   if (!isGameActive || reloading) return;
   const w = WEAPONS[currentWeapon];
@@ -1171,6 +1298,7 @@ function shoot(){
   const fl = weaponGroup?.userData?.flash;
   if (fl){ fl.intensity = 3; setTimeout(() => fl.intensity = 0, 50); }
   createMuzzleSmoke(); createShellCasing();
+  if (tutorialState) markTutStep('shoot');
 
   const dmgMult = getDamageMultiplier();
   const pellets = w.pellets || 1;
@@ -1229,6 +1357,7 @@ function reload(){
   const t = w.reload * getReloadMultiplier();
   showToast('Перезарядка...', t);
   setTimeout(() => { w.ammo = w.maxAmmo; reloading = false; updateHUD(); }, t);
+  if (tutorialState) markTutStep('reload');
 }
 function switchWeapon(key){
   if (!WEAPONS[key]) return;
@@ -1238,7 +1367,7 @@ function switchWeapon(key){
   updateHUD();
 }
 
-// ---------- ОБНОВЛЕНИЕ ИГРОКА ----------
+// ============ ОБНОВЛЕНИЕ ИГРОКА ============
 function updatePlayer(delta){
   if (!isGameActive) return;
   const speed = 5.0 * (isMobile ? 0.8 : 1);
@@ -1253,7 +1382,8 @@ function updatePlayer(delta){
     move.add(forward.clone().multiplyScalar(-joystickDeltaY / 50));
     move.add(right.clone().multiplyScalar(joystickDeltaX / 50));
   }
-  if (move.length() > 0){
+  const wasMoving = move.length() > 0;
+  if (wasMoving){
     move.normalize();
     const np = camera.position.clone().add(move.multiplyScalar(speed * delta));
     let ok = true;
@@ -1270,6 +1400,7 @@ function updatePlayer(delta){
       camera.position.z = np.z;
     }
     if (footstepTimer <= 0){ playFootstepSound(); footstepTimer = 0.5; }
+    if (tutorialState && !tutorialState.moved){ tutorialState.moved = true; markTutStep('move'); }
   }
   if (isJumping){
     verticalVelocity -= GRAVITY * delta;
@@ -1290,13 +1421,18 @@ function updatePlayer(delta){
     shakeAmount *= 0.9;
   }
   footstepTimer -= delta;
+
+  // Проверка завершения туториала
+  if (tutorialState && tutorialState.steps.every(s => s.done)){
+    setTimeout(() => { if (isGameActive && tutorialState && tutorialState.steps.every(s => s.done)) completeTutorial(); }, 800);
+  }
 }
 function jump(){
   if (!isJumping && isGameActive){ verticalVelocity = JUMP_POWER; isJumping = true; }
 }
 function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
 
-// ---------- АНИМАЦИЯ ----------
+// ============ АНИМАЦИЯ ============
 function animate(){
   requestAnimationFrame(animate);
   const delta = Math.min(clock.getDelta(), 0.1);
@@ -1317,54 +1453,30 @@ function animate(){
   else renderer.render(scene, camera);
 }
 
-// ---------- UI ----------
+// ============ UI ============
 function initUI(){
-  document.getElementById('playBtn')?.addEventListener('click', () => {
-    renderLevelGrid();
-    showScreen('map');
-  });
-  document.getElementById('survivalBtn')?.addEventListener('click', () => {
-    renderSurvivalGrid();
-    showScreen('survivalMenu');
-  });
-  document.getElementById('multiplayerBtn')?.addEventListener('click', () => {
-    showScreen('multiplayerMenu');
-  });
-  document.getElementById('shopBtn')?.addEventListener('click', () => {
-    renderShop('skins');
-    updateCoinsDisplay();
-    showScreen('shop');
-  });
+  document.getElementById('playBtn')?.addEventListener('click', () => { renderLevelGrid(); showScreen('map'); });
+  document.getElementById('survivalBtn')?.addEventListener('click', () => { renderSurvivalGrid(); showScreen('survivalMenu'); });
+  document.getElementById('multiplayerBtn')?.addEventListener('click', () => { showScreen('multiplayerMenu'); });
+  document.getElementById('shopBtn')?.addEventListener('click', () => { renderShop('skins'); updateCoinsDisplay(); showScreen('shop'); });
   document.getElementById('settingsBtn')?.addEventListener('click', () => showScreen('settings'));
-
   document.getElementById('backToMenu')?.addEventListener('click', () => showScreen('menu'));
   document.getElementById('backFromShop')?.addEventListener('click', () => showScreen('menu'));
   document.getElementById('closeSettings')?.addEventListener('click', () => showScreen('menu'));
   document.getElementById('backFromSurvival')?.addEventListener('click', () => showScreen('menu'));
   document.getElementById('backFromMultiplayer')?.addEventListener('click', () => showScreen('menu'));
-
   document.getElementById('horrorToggle')?.addEventListener('change', e => {
     horrorMode = e.target.checked;
     try{ localStorage.setItem('zombieshoot_horror', horrorMode); }catch(e){}
   });
-  document.getElementById('sensSlider')?.addEventListener('input', e => {
-    MOUSE_SENSITIVITY = parseFloat(e.target.value) / 2500;
-  });
-  document.getElementById('volSlider')?.addEventListener('input', e => {
-    volume = parseInt(e.target.value) / 100;
-  });
-  document.getElementById('fovSlider')?.addEventListener('input', e => {
-    if (camera){ camera.fov = parseInt(e.target.value); camera.updateProjectionMatrix(); }
-  });
-  document.getElementById('resetProgress')?.addEventListener('click', () => {
-    if (confirm('Сбросить прогресс?')) resetProgress();
-  });
-
+  document.getElementById('sensSlider')?.addEventListener('input', e => { MOUSE_SENSITIVITY = parseFloat(e.target.value) / 2500; });
+  document.getElementById('volSlider')?.addEventListener('input', e => { volume = parseInt(e.target.value) / 100; });
+  document.getElementById('fovSlider')?.addEventListener('input', e => { if (camera){ camera.fov = parseInt(e.target.value); camera.updateProjectionMatrix(); } });
+  document.getElementById('resetProgress')?.addEventListener('click', () => { if (confirm('Сбросить прогресс?')) resetProgress(); });
   document.getElementById('toMapBtn')?.addEventListener('click', () => { renderLevelGrid(); showScreen('map'); });
   document.getElementById('replayBtn')?.addEventListener('click', () => startGame(currentLevel, survivalMode));
   document.getElementById('retryBtn')?.addEventListener('click', () => startGame(currentLevel, survivalMode));
   document.getElementById('toMapBtn2')?.addEventListener('click', () => { renderLevelGrid(); showScreen('map'); });
-
   document.querySelectorAll('.shop-tab').forEach(tab => {
     tab.addEventListener('click', () => {
       document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
@@ -1372,7 +1484,6 @@ function initUI(){
       renderShop(tab.dataset.tab);
     });
   });
-
   if (document.getElementById('horrorToggle')) document.getElementById('horrorToggle').checked = horrorMode;
 }
 
@@ -1386,6 +1497,22 @@ function renderLevelGrid(){
   const grid = document.getElementById('levelGrid');
   if (!grid) return;
   grid.innerHTML = '';
+  // Сначала туториал
+  const tutProg = PROGRESS.levels[0] || {unlocked:true, stars:0};
+  const tutCard = document.createElement('div');
+  tutCard.className = 'level-card' + (tutProg.completed ? ' completed' : '');
+  tutCard.style.borderColor = '#00d4ff';
+  let tutStars = '';
+  for (let s = 1; s <= 3; s++) tutStars += `<svg class="${s <= (tutProg.stars || 0) ? '' : 'off'}"><use href="#icon-star"/></svg>`;
+  tutCard.innerHTML = `
+    <div class="level-num" style="color:#00d4ff">0</div>
+    <div class="level-icon">🎓</div>
+    <div class="level-name">Тренировка</div>
+    <div class="level-stars">${tutStars}</div>
+  `;
+  tutCard.onclick = () => startGame(0);
+  grid.appendChild(tutCard);
+  // Затем 8 уровней
   for (let i = 1; i <= 8; i++){
     const lvl = LEVELS[i];
     const prog = PROGRESS.levels[i];
@@ -1434,25 +1561,21 @@ function updateCoinsDisplay(){
 function updateHUD(){
   const hp = document.getElementById('health');
   if (hp) hp.textContent = Math.ceil(health);
-
   const sc = document.getElementById('score');
   if (sc){
     const lvl = LEVELS[currentLevel] || LEVELS[1];
-    sc.textContent = `Ур.${currentLevel} | Волна ${wave}/${lvl.waves}`;
+    if (lvl.isTutorial) sc.textContent = '🎓 ТРЕНИРОВКА';
+    else sc.textContent = `Ур.${currentLevel} | Волна ${wave}/${lvl.waves}`;
   }
-
   const am = document.getElementById('ammo');
   if (am){
     const w = WEAPONS[currentWeapon];
     am.innerHTML = `<svg class="ico-hud"><use href="#icon-${w.icon}"/></svg> ${w.ammo}/${w.maxAmmo}`;
   }
-
   const md = document.getElementById('medkits');
   if (md) md.innerHTML = `<svg class="ico-hud"><use href="#icon-medkit"/></svg> x${medkits}`;
-
   const gr = document.getElementById('grenades');
   if (gr) gr.innerHTML = `<svg class="ico-hud"><use href="#icon-grenade"/></svg> x${playerGrenades}`;
-
   const bb = document.getElementById('bossBar');
   if (bb){
     if (currentBoss && currentBoss.userData){
@@ -1470,7 +1593,7 @@ let toastEl = null, toastTimeout = null;
 function showToast(text, duration = 2000){
   if (!toastEl){
     toastEl = document.createElement('div');
-    toastEl.style.cssText = 'position:fixed;top:25%;left:50%;transform:translateX(-50%);font-size:22px;color:#fff;text-shadow:2px 2px 8px #000;font-family:Impact,sans-serif;letter-spacing:2px;pointer-events:none;z-index:80;transition:opacity 0.3s;';
+    toastEl.style.cssText = 'position:fixed;top:25%;left:50%;transform:translateX(-50%);font-size:22px;color:#fff;text-shadow:2px 2px 8px #000;font-family:Impact,sans-serif;letter-spacing:2px;pointer-events:none;z-index:80;transition:opacity 0.3s;text-align:center;';
     document.body.appendChild(toastEl);
   }
   toastEl.textContent = text;
@@ -1483,7 +1606,6 @@ function renderShop(tab = 'weapons'){
   const body = document.getElementById('shopContent');
   if (!body) return;
   updateCoinsDisplay();
-
   if (tab === 'weapons'){
     let html = '<div class="shop-grid">';
     for (const key in WEAPONS){
@@ -1559,7 +1681,7 @@ function handleSkin(key){
 window.handleWeapon = handleWeapon;
 window.handleSkin = handleSkin;
 
-// ---------- УПРАВЛЕНИЕ (РАБОТАЕТ НА ЛЮБОЙ РАСКЛАДКЕ) ----------
+// ============ УПРАВЛЕНИЕ ============
 function setupControls(){
   document.addEventListener('keydown', e => {
     const k = e.code;
@@ -1583,6 +1705,7 @@ function setupControls(){
         isGameActive = false;
         stopHorrorAmbient(); stopDynamicMusic();
         document.getElementById('hud').style.display = 'none';
+        document.getElementById('tutorialHUD').style.display = 'none';
         document.getElementById('menu').style.display = 'flex';
         renderer.domElement.style.display = 'none';
         if (document.pointerLockElement) document.exitPointerLock();
@@ -1600,9 +1723,14 @@ function setupControls(){
   document.addEventListener('mousemove', e => {
     if (!isGameActive) return;
     if (document.pointerLockElement === renderer.domElement){
-      yaw -= e.movementX * MOUSE_SENSITIVITY;
-      pitch -= e.movementY * MOUSE_SENSITIVITY;
-      pitch = clamp(pitch, -Math.PI/2 + 0.1, Math.PI/2 - 0.1);
+      if (e.movementX !== 0 || e.movementY !== 0){
+        yaw -= e.movementX * MOUSE_SENSITIVITY;
+        pitch -= e.movementY * MOUSE_SENSITIVITY;
+        pitch = clamp(pitch, -Math.PI/2 + 0.1, Math.PI/2 - 0.1);
+        if (tutorialState && !tutorialState.looked && (Math.abs(e.movementX) > 3 || Math.abs(e.movementY) > 3)){
+          tutorialState.looked = true; markTutStep('look');
+        }
+      }
     }
   });
   document.addEventListener('mousedown', e => {
@@ -1624,7 +1752,6 @@ function initMobileControls(){
   const base = document.getElementById('joystickBase');
   const knob = document.getElementById('joystickKnob');
   const lookZone = document.getElementById('mobileControls');
-
   if (jz && base && knob){
     jz.addEventListener('touchstart', e => {
       const t = e.changedTouches[0];
@@ -1656,7 +1783,6 @@ function initMobileControls(){
       }
     }, {passive:true});
   }
-
   const bind = (id, action) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -1674,7 +1800,6 @@ function initMobileControls(){
     const i = list.indexOf(currentWeapon);
     switchWeapon(list[(i + 1) % list.length]);
   });
-
   if (lookZone){
     lookZone.addEventListener('touchstart', e => {
       for (const t of e.changedTouches){
@@ -1691,6 +1816,7 @@ function initMobileControls(){
           pitch -= (t.clientY - lookLastY) * 0.005;
           pitch = clamp(pitch, -Math.PI/2 + 0.1, Math.PI/2 - 0.1);
           lookLastX = t.clientX; lookLastY = t.clientY;
+          if (tutorialState && !tutorialState.looked) { tutorialState.looked = true; markTutStep('look'); }
         }
       }
     }, {passive:true});
@@ -1702,7 +1828,6 @@ function initMobileControls(){
   }
 }
 
-// ---------- РЕСАЙЗ ----------
 window.addEventListener('resize', () => {
   if (!camera) return;
   camera.aspect = innerWidth / innerHeight;
@@ -1711,7 +1836,6 @@ window.addEventListener('resize', () => {
   if (composer) composer.setSize(innerWidth, innerHeight);
 });
 
-// ---------- СТАРТ ----------
 window.addEventListener('load', () => {
   document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
   document.getElementById('menu').style.display = 'flex';

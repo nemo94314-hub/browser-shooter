@@ -1,4 +1,4 @@
-// ============ ZOMBIESHOOT v15.2 — PART 1/2 ============
+// ============ ZOMBIESHOOT v15.3 — JUICE EDITION ============
 
 const DEFAULT_PROGRESS={
   coins:0,
@@ -127,6 +127,10 @@ let enemies=[],obstacles=[],enemyBullets=[],grenades=[],lootCrates=[],corpses=[]
 let currentBoss=null,bossPhase=1;
 let playerGrenades=3;
 let clock=new THREE.Clock();
+let hitpauseTimer=0;
+let slowMotionTimer=0;
+let isAiming=false;
+let baseFov=isMobile?85:75;
 let yaw=0,pitch=0,recoilPitch=0;
 let verticalVelocity=0,playerY=1.7,isJumping=false;
 let bobPhase=0,shakeAmount=0;
@@ -162,6 +166,7 @@ const TUTORIAL_STEPS=[
   {id:'kill',text:'Уничтожь 3 мишени',done:false}
 ];
 
+// ============ ЗВУК ============
 function playTone(freq,dur,type='square',vol=0.08){if(!audioCtx)return;const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(freq,audioCtx.currentTime);g.gain.setValueAtTime(vol*volume,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur);o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+dur);}
 function playClickSound(f,d){playTone(f,d,'square',0.08);}
 function playShootSoundEnhanced(){if(!audioCtx)return;const now=audioCtx.currentTime;const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='square';const base=currentWeapon==='sniper'?400:(currentWeapon==='shotgun'?150:200);o.frequency.setValueAtTime(base,now);o.frequency.exponentialRampToValueAtTime(40,now+0.1);g.gain.setValueAtTime(0.2*volume,now);g.gain.exponentialRampToValueAtTime(0.001,now+0.12);o.connect(g);g.connect(audioCtx.destination);o.start(now);o.stop(now+0.13);}
@@ -183,6 +188,45 @@ function stopHorrorAmbient(){activeAmbientNodes.forEach(n=>{try{n.osc.stop();}ca
 function startDynamicMusic(){if(!audioCtx||musicState.running)return;musicState.running=true;const calmGain=audioCtx.createGain();calmGain.gain.setValueAtTime(0.06*volume,audioCtx.currentTime);calmGain.connect(audioCtx.destination);const calmOsc=audioCtx.createOscillator();calmOsc.type='sine';calmOsc.frequency.setValueAtTime(55,audioCtx.currentTime);const cf=audioCtx.createBiquadFilter();cf.type='lowpass';cf.frequency.setValueAtTime(200,audioCtx.currentTime);calmOsc.connect(cf);cf.connect(calmGain);calmOsc.start();const combatGain=audioCtx.createGain();combatGain.gain.setValueAtTime(0,audioCtx.currentTime);combatGain.connect(audioCtx.destination);const combatOsc=audioCtx.createOscillator();combatOsc.type='sawtooth';combatOsc.frequency.setValueAtTime(40,audioCtx.currentTime);const bf=audioCtx.createBiquadFilter();bf.type='lowpass';bf.frequency.setValueAtTime(400,audioCtx.currentTime);const bassGain=audioCtx.createGain();bassGain.gain.setValueAtTime(0,audioCtx.currentTime);combatOsc.connect(bf);bf.connect(bassGain);bassGain.connect(combatGain);combatOsc.start();function beat(){if(!musicState.running)return;const t=audioCtx.currentTime;bassGain.gain.cancelScheduledValues(t);bassGain.gain.setValueAtTime(0.35,t);bassGain.gain.exponentialRampToValueAtTime(0.001,t+0.2);setTimeout(beat,260);}beat();musicState.calmGain=calmGain;musicState.combatGain=combatGain;musicState.calmOsc=calmOsc;musicState.combatOsc=combatOsc;musicState.bassGain=bassGain;}
 function stopDynamicMusic(){musicState.running=false;try{musicState.calmOsc?.stop();}catch(e){}try{musicState.combatOsc?.stop();}catch(e){}try{if(musicState.calmGain)musicState.calmGain.gain.linearRampToValueAtTime(0,audioCtx.currentTime+0.3);if(musicState.combatGain)musicState.combatGain.gain.linearRampToValueAtTime(0,audioCtx.currentTime+0.3);}catch(e){}musicState={calmGain:null,combatGain:null,calmOsc:null,combatOsc:null,bassGain:null,intensity:0,running:false};}
 function updateMusicIntensity(){if(!audioCtx||!musicState.running||!isGameActive)return;let maxThreat=0;for(const e of enemies){if(e.userData.isTarget)continue;const d=e.position.distanceTo(camera.position);if(d<30){const t=(1-d/30)*(e.userData.isBoss?1.5:1);if(t>maxThreat)maxThreat=t;}}musicState.intensity+=(Math.min(1,maxThreat)-musicState.intensity)*0.05;const t=audioCtx.currentTime;try{musicState.calmGain.gain.linearRampToValueAtTime((1-musicState.intensity)*0.06*volume,t+0.3);musicState.combatGain.gain.linearRampToValueAtTime(musicState.intensity*0.12*volume,t+0.3);}catch(e){}}
+
+// ============ JUICE: Damage Numbers + Kill Feed ============
+function showDamageNumber(pos3D,value,isHead){
+  if(!camera)return;
+  const v=pos3D.clone().project(camera);
+  const x=(v.x*0.5+0.5)*window.innerWidth;
+  const y=(-v.y*0.5+0.5)*window.innerHeight;
+  const el=document.createElement('div');
+  el.textContent=(isHead?'🎯 ':'')+value;
+  el.style.cssText='position:fixed;left:'+x+'px;top:'+y+'px;font-family:Impact,sans-serif;font-size:'+(isHead?'26px':'20px')+';color:'+(isHead?'#ffcc00':'#fff')+';text-shadow:0 0 8px #000,2px 2px 4px #000;pointer-events:none;z-index:60;transform:translate(-50%,-50%);transition:transform 0.8s cubic-bezier(0.2,0.8,0.2,1),opacity 0.8s;font-weight:900;';
+  document.body.appendChild(el);
+  requestAnimationFrame(()=>{
+    el.style.transform='translate(-50%,-50%) translateY(-50px) scale(1.3)';
+    el.style.opacity='0';
+  });
+  setTimeout(()=>el.remove(),900);
+}
+let killFeedEl=null;
+function initKillFeed(){
+  if(killFeedEl)return;
+  killFeedEl=document.createElement('div');
+  killFeedEl.id='killFeed';
+  killFeedEl.style.cssText='position:fixed;top:90px;right:15px;display:flex;flex-direction:column;gap:6px;z-index:60;pointer-events:none;font-family:"Courier New",monospace;font-size:13px;';
+  document.body.appendChild(killFeedEl);
+}
+function addKillFeed(text,color){
+  if(!killFeedEl)initKillFeed();
+  const el=document.createElement('div');
+  el.textContent=text;
+  el.style.cssText='background:rgba(0,0,0,0.65);border-left:3px solid '+(color||'#fff')+';padding:6px 12px;color:'+(color||'#fff')+';text-shadow:0 0 6px #000;opacity:0;transform:translateX(30px);transition:opacity 0.3s,transform 0.3s;';
+  killFeedEl.appendChild(el);
+  requestAnimationFrame(()=>{el.style.opacity='1';el.style.transform='translateX(0)';});
+  setTimeout(()=>{
+    el.style.opacity='0';
+    el.style.transform='translateX(30px)';
+    setTimeout(()=>el.remove(),300);
+  },4000);
+  while(killFeedEl.children.length>5)killFeedEl.children[0].remove();
+}
 
 // ============ ТЕКСТУРЫ ============
 const textureCache={};
@@ -410,7 +454,6 @@ function buildLevelEnvironment(levelNum){
   }else flashlight=null;
   createWeather(lvl.theme);
 }
-// ============ ZOMBIESHOOT v15.2 — PART 2/2 ============
 
 // ============ ОРУЖИЕ ============
 function createWeapon(type){
@@ -583,6 +626,7 @@ function startGame(level=1,survival=null){
   isGameActive=true;
   reloading=false;lastShotTime=0;isMouseDown=false;
   yaw=0;pitch=0;recoilPitch=0;
+  hitpauseTimer=0;slowMotionTimer=0;isAiming=false;
   verticalVelocity=0;playerY=1.7;isJumping=false;
   bobPhase=0;shakeAmount=0;
   keys.w=keys.a=keys.s=keys.d=false;
@@ -779,6 +823,11 @@ function updateEnemies(delta){
         addScore(ud.type==='tank'?300:ud.type==='runner'?80:100);
         if(Math.random()<0.3)createLootCrate(e.position.clone(),ud.weaponDrop);
       }
+      // ===== JUICE: Kill Feed =====
+      const typeNames={melee:'Зомби',shooter:'Стрелок',grenadier:'Гренадер',runner:'Бегун',tank:'Танк',bomber:'Взрывник',spider:'Паук',target:'Мишень'};
+      const tn=typeNames[ud.type]||'Зомби';
+      if(ud.isBoss){addKillFeed('👑 '+tn+' ПОВЕРЖЕН','#ff6600');slowMotionTimer=1.5;}
+      else addKillFeed('💀 '+tn,'#fff');
       saveProgress();checkAchConditions();
       scene.remove(e);enemies.splice(i,1);
       checkWaveComplete();
@@ -954,8 +1003,8 @@ function shoot(){
   if(w.ammo<=0){reload();return;}
   lastShotTime=now;w.ammo--;
   playShootSoundEnhanced();
-  recoilPitch=0.02+Math.random()*0.02;
-  shakeAmount=Math.min(1,shakeAmount+0.1);
+  recoilPitch=0.05+Math.random()*0.04;
+  shakeAmount=Math.min(1,shakeAmount+0.18);
   const fl=weaponGroup?.userData?.flash;
   if(fl){fl.intensity=3;setTimeout(()=>fl.intensity=0,50);}
   createMuzzleSmoke();createShellCasing();
@@ -982,6 +1031,9 @@ function shoot(){
         playHitSoundEnhanced();
         createBloodBurst(hit.point,isHead);
         showHitMarker(isHead);
+        // ===== JUICE: Hitpause + Damage Numbers =====
+        hitpauseTimer=0.06;
+        showDamageNumber(hit.point,Math.round(w.damage*mult*dmgMult),isHead);
         if(isHead){
           playHeadshotSound();addScore(25);
           PROGRESS.records.totalHeadshots=(PROGRESS.records.totalHeadshots||0)+1;
@@ -1058,6 +1110,12 @@ function updatePlayer(delta){
   bobPhase+=delta*(move.length()>0?10:2);
   const ba=move.length()>0?0.05:0.01;
   camera.position.y+=Math.sin(bobPhase)*ba;
+  // ===== JUICE: ADS FOV zoom =====
+  const targetFov=isAiming?Math.round(baseFov*0.6):baseFov;
+  if(Math.abs(camera.fov-targetFov)>0.3){
+    camera.fov+=(targetFov-camera.fov)*0.22;
+    camera.updateProjectionMatrix();
+  }
   camera.rotation.order='YXZ';
   camera.rotation.y=yaw;
   camera.rotation.x=pitch+recoilPitch;
@@ -1071,7 +1129,10 @@ function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 
 function animate(){
   requestAnimationFrame(animate);
-  const delta=Math.min(clock.getDelta(),0.1);
+  let delta=Math.min(clock.getDelta(),0.1);
+  // ===== JUICE: Hitpause + Slow motion =====
+  if(hitpauseTimer>0){hitpauseTimer-=delta;delta*=0.15;}
+  if(slowMotionTimer>0){slowMotionTimer-=delta;delta*=0.3;}
   if(isGameActive){
     updatePlayer(delta);
     updateEnemies(delta);
@@ -1195,7 +1256,6 @@ function initUI(){
   if(bt){bt.checked=bloomEnabled;bt.addEventListener('change',e=>{bloomEnabled=e.target.checked;try{localStorage.setItem('zombieshoot_bloom',bloomEnabled);}catch(e){}rebuildPostProcessing();});}
   const st=document.getElementById('ssaoToggle');
   if(st){st.checked=ssaoEnabled;st.addEventListener('change',e=>{ssaoEnabled=e.target.checked;try{localStorage.setItem('zombieshoot_ssao',ssaoEnabled);}catch(e){}rebuildPostProcessing();});}
-  bind('sensSlider',null);
   const ss=document.getElementById('sensSlider');
   if(ss)ss.addEventListener('input',e=>{MOUSE_SENSITIVITY=parseFloat(e.target.value)/2500;});
   const vs=document.getElementById('volSlider');
@@ -1464,9 +1524,12 @@ function setupControls(){
   document.addEventListener('mousedown',e=>{
     if(!isGameActive)return;
     if(e.button===0){isMouseDown=true;if(!document.pointerLockElement)renderer.domElement.requestPointerLock();shoot();}
-    if(e.button===2){e.preventDefault();throwPlayerGrenade();}
+    if(e.button===2){e.preventDefault();isAiming=true;}
   });
-  document.addEventListener('mouseup',e=>{if(e.button===0)isMouseDown=false;});
+  document.addEventListener('mouseup',e=>{
+    if(e.button===0)isMouseDown=false;
+    if(e.button===2)isAiming=false;
+  });
   document.addEventListener('contextmenu',e=>{if(isGameActive)e.preventDefault();});
 }
 function initMobileControls(){

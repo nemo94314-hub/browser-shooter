@@ -849,3 +849,10 @@ function initMobileControls(){
 }
 window.addEventListener('resize',()=>{if(!camera)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);if(composer)composer.setSize(innerWidth,innerHeight);});
 window.addEventListener('load',()=>{document.querySelectorAll('.screen').forEach(s=>s.style.display='none');document.getElementById('menu').style.display='flex';init();});
+
+// Автозапуск при загрузке
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', setupMultiplayerUI);
+} else {
+  setupMultiplayerUI();
+}

@@ -26,7 +26,7 @@ let yaw=0,pitch=0,recoilPitch=0,verticalVelocity=0,playerY=1.7,isJumping=false,b
 const GRAVITY=22,JUMP_POWER=8;
 let MOUSE_SENSITIVITY=0.002,volume=0.4,medkits=2,horrorMode=true,survivalMode=null;
 let bloomEnabled=true,ssaoEnabled=false,weather=null;
-let celShadingEnabled=true,ps1ModeEnabled=false,toonGradient=null;
+let celShadingEnabled=false,ps1ModeEnabled=false,toonGradient=null;
 const isMobile=/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)||('ontouchstart' in window&&window.innerWidth<1200);
 let joystickActive=false,joystickTouchId=null,joystickStartX=0,joystickStartY=0,joystickDeltaX=0,joystickDeltaY=0,lookTouchId=null,lookLastX=0,lookLastY=0;
 let currentWeapon='rifle',reloading=false,lastShotTime=0,isMouseDown=false;
